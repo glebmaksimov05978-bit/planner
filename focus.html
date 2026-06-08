@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Фокус</title>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;600;700;900&family=Golos+Text:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+html, body { width:100%; height:100%; overflow:hidden; }
+
+body {
+  font-family:'Golos Text',sans-serif;
+  color:#f0e8ff;
+  background:linear-gradient(180deg,#1a2a50 0%,#243870 20%,#2e4a88 35%,#243060 55%,#141828 75%,#060410 100%);
+}
+
+.screen { display:none; width:100%; height:100vh; flex-direction:column; overflow:hidden; }
+.screen.active { display:flex; }
+
+/* SETTINGS */
+#sSettings {
+  background:linear-gradient(180deg,#0d0a28,#130e38 60%,#0d0a28);
+  overflow-y:auto; align-items:center; padding:52px 20px 32px; gap:14px;
+}
+.set-back { align-self:flex-start; color:#6050a0; font-size:13px; cursor:pointer; text-decoration:underline; text-underline-offset:3px; }
+.set-label { font-family:'Unbounded',sans-serif; font-size:11px; font-weight:600; letter-spacing:.2em; color:#6050a0; text-transform:uppercase; }
+.set-title { font-family:'Unbounded',sans-serif; font-size:22px; font-weight:700; text-align:center; background:linear-gradient(135deg,#f0e8ff,#ffb3cc); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+.sliders { width:100%; display:flex; flex-direction:column; gap:10px; }
+.scard { background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); border-radius:16px; padding:16px 18px; }
+.srow { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
+.sname { font-size:14px; font-weight:500; }
+.sval { font-family:'Unbounded',sans-serif; font-size:16px; font-weight:700; color:#ff6b9d; }
+input[type=range] { width:100%; -webkit-appearance:none; height:5px; border-radius:5px; background:rgba(255,255,255,0.12); outline:none; cursor:pointer; }
+input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:24px; height:24px; border-radius:50%; background:linear-gradient(135deg,#ff6b9d,#c44dff); box-shadow:0 0 12px rgba(255,107,157,.5); cursor:pointer; }
+.start-btn { width:100%; background:linear-gradient(135deg,#ff6b9d,#c44dff); border:none; border-radius:18px; padding:18px; color:#fff; font-family:'Unbounded',sans-serif; font-size:14px; font-weight:700; letter-spacing:.08em; cursor:pointer; box-shadow:0 8px 30px rgba(255,107,157,.4); }
+.start-btn:active { opacity:.88; transform:scale(.97); }
+
+/* FOCUS */
+#sFocus { position:relative; justify-content:space-between; padding:52px 20px 36px; }
+
+/* sun glow */
+.sun-glow {
+  position:absolute; width:340px; height:340px;
+  left:50%; top:38%; transform:translate(-50%,-50%);
+  border-radius:50%;
+  background:radial-gradient(circle,rgba(255,215,120,0.5) 0%,rgba(255,170,80,0.25) 28%,rgba(255,120,60,0.07) 60%,transparent 75%);
+  z-index:1; pointer-events:none; opacity:0; transition:opacity 3s ease;
+}
+
+/* clouds */
+.clouds { position:absolute; inset:0; z-index:1; pointer-events:none; overflow:hidden; }
+.cloud { position:absolute; border-radius:50%; background:rgba(255,255,255,0.07); filter:blur(18px); }
+
+/* tree */
+.tree-container {
+  position:absolute;
+  /* center vertically — skala at 55% height */
+  top:50%; left:50%;
+  transform:translate(-50%, -48%);
+  width:100%; max-width:460px; z-index:2;
+  display:flex; align-items:center; justify-content:center;
+  /* grow from bottom: clip reveals upward */
+  clip-path:inset(100% 0 0 0);
+  transition:clip-path 1.2s cubic-bezier(0.4,0,0.2,1);
+}
+.tree-img {
+  width:88%;
+  /* mix-blend-mode multiply removes white/grey checkerboard on dark bg */
+  mix-blend-mode: screen;
+  display:block;
+  filter:drop-shadow(0 0 20px rgba(255,150,200,0.3)) drop-shadow(0 0 40px rgba(255,120,180,0.15));
+  transition:filter 2s ease;
+}
+.tree-img.blooming {
+  filter:drop-shadow(0 0 35px rgba(255,160,210,0.55)) drop-shadow(0 0 70px rgba(255,140,190,0.28)) drop-shadow(0 0 110px rgba(255,200,150,0.15));
+}
+.tree-img.burned {
+  filter:grayscale(0.5) sepia(0.6) hue-rotate(-15deg) brightness(0.55) drop-shadow(0 0 20px rgba(200,50,0,0.7));
+}
+
+/* FIRE CANVAS — sits over tree */
+#fireCanvas {
+  position:absolute; bottom:0; left:50%; transform:translateX(-50%);
+  width:100%; max-width:500px; height:100%;
+  z-index:3; pointer-events:none;
+  opacity:0; transition:opacity 0.3s;
+}
+#fireCanvas.active { opacity:1; }
+
+/* petals */
+.petal-layer { position:absolute; inset:0; overflow:hidden; pointer-events:none; z-index:4; }
+.pk { position:absolute; top:-18px; opacity:0; animation:pfall linear infinite; }
+@keyframes pfall {
+  0%{opacity:0;transform:translateY(0) rotate(0deg) translateX(0)}
+  8%{opacity:.85} 90%{opacity:.65}
+  100%{opacity:0;transform:translateY(108vh) rotate(480deg) translateX(80px)}
+}
+
+/* UI */
+.focus-ui { position:relative; z-index:10; display:flex; flex-direction:column; justify-content:space-between; height:100%; pointer-events:none; }
+.focus-ui > * { pointer-events:all; }
+.f-top { display:flex; justify-content:space-between; align-items:center; }
+.sess-badge { font-family:'Unbounded',sans-serif; font-size:11px; font-weight:600; letter-spacing:.1em; color:rgba(240,232,255,.65); background:rgba(6,4,26,.6); border:1px solid rgba(255,255,255,.14); border-radius:20px; padding:6px 14px; backdrop-filter:blur(8px); }
+.set-ico { width:36px; height:36px; border-radius:12px; background:rgba(6,4,26,.6); border:1px solid rgba(255,255,255,.14); display:flex; align-items:center; justify-content:center; font-size:16px; cursor:pointer; backdrop-filter:blur(8px); }
+.f-mid { flex:1; pointer-events:none; }
+.f-bottom { display:flex; flex-direction:column; align-items:center; gap:10px; }
+.quit-btn { width:100%; border:none; border-radius:16px; padding:15px; font-family:'Unbounded',sans-serif; font-size:13px; font-weight:700; letter-spacing:.06em; cursor:pointer; transition:all .35s; backdrop-filter:blur(14px); }
+.quit-btn.work { background:rgba(140,20,20,.35); border:1px solid rgba(255,80,80,.5); color:#ff9090; }
+.quit-btn.rest { background:rgba(100,50,200,.35); border:1px solid rgba(160,110,255,.5); color:#c0a8ff; }
+.quit-btn:active { transform:scale(.96); }
+.t-phase { font-family:'Unbounded',sans-serif; font-size:10px; font-weight:600; letter-spacing:.2em; text-transform:uppercase; margin-bottom:1px; text-align:center; }
+.t-phase.work { color:rgba(255,200,215,.65); }
+.t-phase.rest { color:rgba(180,215,255,.65); }
+.t-num { font-family:'Unbounded',sans-serif; font-size:40px; font-weight:900; line-height:1; letter-spacing:-.02em; text-align:center; text-shadow:0 0 28px rgba(255,150,190,.45),0 2px 14px rgba(0,0,0,.8); }
+.t-num.work { color:rgba(255,242,248,.88); }
+.t-num.rest { color:rgba(200,228,255,.88); }
+.t-hint { font-size:11px; color:rgba(200,185,240,.38); margin-top:2px; text-align:center; }
+
+/* END */
+.end-screen { background:linear-gradient(180deg,#0d0a28,#130e38,#0d0a28); align-items:center; justify-content:center; text-align:center; padding:60px 24px 40px; overflow-y:auto; gap:0; }
+.end-icon { font-size:58px; margin-bottom:14px; animation:pop .5s cubic-bezier(.34,1.56,.64,1); }
+@keyframes pop { from{transform:scale(0)} to{transform:scale(1)} }
+.end-title { font-family:'Unbounded',sans-serif; font-size:22px; font-weight:900; margin-bottom:8px; }
+.end-title.win { background:linear-gradient(135deg,#ffb3cc,#c44dff); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+.end-title.lose { color:#ff7070; }
+.end-sub { font-size:14px; color:#6050a0; line-height:1.6; margin-bottom:10px; }
+.end-xp { font-family:'Unbounded',sans-serif; font-size:30px; font-weight:900; color:#fde047; margin-bottom:16px; }
+.end-tree-wrap { width:min(260px,80vw); margin:0 auto 22px; background:#06041a; border-radius:12px; overflow:hidden; }
+.end-tree-wrap img { width:100%; mix-blend-mode:screen; filter:drop-shadow(0 0 20px rgba(255,150,200,0.4)); }
+.end-tree-wrap.burned img { mix-blend-mode:screen; filter:grayscale(0.6) sepia(0.6) hue-rotate(-15deg) brightness(0.5) drop-shadow(0 0 18px rgba(200,50,0,0.6)); }
+.end-btn { width:100%; border:none; border-radius:16px; padding:16px; color:#fff; font-family:'Unbounded',sans-serif; font-size:13px; font-weight:700; cursor:pointer; }
+.end-btn.win { background:linear-gradient(135deg,#ff6b9d,#c44dff); box-shadow:0 8px 28px rgba(255,107,157,.4); }
+.end-btn.lose { background:linear-gradient(135deg,#ff6b6b,#cc2200); }
+</style>
+</head>
+<body>
+
+<!-- SETTINGS -->
+<div class="screen active" id="sSettings">
+  <div class="set-back" onclick="goHome()">← К задачам</div>
+  <div class="set-label">режим фокуса</div>
+  <div class="set-title">Посади сакуру 🌸</div>
+  <div style="width:200px;margin:0 auto;background:#0d0a28;border-radius:12px;overflow:hidden">
+    <img src="Sakura.PNG" style="width:100%;mix-blend-mode:screen;filter:drop-shadow(0 0 20px rgba(255,150,200,0.4))">
+  </div>
+  <div class="sliders">
+    <div class="scard"><div class="srow"><span class="sname">🌸 Время фокуса</span><span class="sval" id="vF">25 мин</span></div><input type="range" id="rF" min="5" max="120" value="25" step="5" oninput="onSlide()"></div>
+    <div class="scard"><div class="srow"><span class="sname">☕ Перерыв</span><span class="sval" id="vB">5 мин</span></div><input type="range" id="rB" min="1" max="30" value="5" step="1" oninput="onSlide()"></div>
+    <div class="scard"><div class="srow"><span class="sname">🔄 Сессий подряд</span><span class="sval" id="vS">2</span></div><input type="range" id="rS" min="1" max="6" value="2" step="1" oninput="onSlide()"></div>
+  </div>
+  <button class="start-btn" onclick="startFocus()">🌱 ПРИСТУПАЮ</button>
+</div>
+
+<!-- FOCUS -->
+<div class="screen" id="sFocus">
+  <div class="sun-glow" id="sunGlow"></div>
+  <div class="clouds">
+    <div class="cloud" style="width:200px;height:60px;left:-20px;top:12%"></div>
+    <div class="cloud" style="width:160px;height:45px;right:-10px;top:8%"></div>
+    <div class="cloud" style="width:130px;height:40px;left:20%;top:20%"></div>
+    <div class="cloud" style="width:100px;height:35px;right:15%;top:18%"></div>
+  </div>
+  <div class="tree-container" id="treeContainer">
+    <img class="tree-img" id="treeImg" src="Sakura.PNG" alt="сакура">
+  </div>
+  <canvas id="fireCanvas"></canvas>
+  <div class="petal-layer" id="petalLayer"></div>
+  <div class="focus-ui">
+    <div class="f-top">
+      <div class="sess-badge" id="sessBadge">Сессия 1 / 2</div>
+      <div class="set-ico" onclick="openSettings()">⚙️</div>
+    </div>
+    <div class="f-mid"></div>
+    <div class="f-bottom">
+      <button class="quit-btn work" id="qBtn" onclick="onQuit()">🔥 СДАТЬСЯ</button>
+      <div>
+        <div class="t-phase work" id="tPhase">ФОКУС</div>
+        <div class="t-num work" id="tNum">25:00</div>
+        <div class="t-hint" id="tHint">Сосредоточься, Глеб</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- WIN -->
+<div class="screen end-screen" id="sWin">
+  <div class="end-icon">🌸</div>
+  <div class="end-title win">САКУРА РАСЦВЕЛА</div>
+  <div class="end-sub">Ты продержался все сессии.<br>Дерево выросло полностью.</div>
+  <div class="end-xp" id="winXp">+50 XP ⚡</div>
+  <div class="end-tree-wrap"><img src="Sakura.PNG"></div>
+  <button class="end-btn win" onclick="show('sSettings')">🌱 Новая сессия</button>
+</div>
+
+<!-- LOSE -->
+<div class="screen end-screen" id="sLose">
+  <div class="end-icon">🔥</div>
+  <div class="end-title lose">ДЕРЕВО СГОРЕЛО</div>
+  <div class="end-sub">Ты прервал фокус.<br>Попробуй снова — у тебя получится.</div>
+  <div class="end-tree-wrap burned"><img src="Sakura.PNG"></div>
+  <button class="end-btn lose" onclick="show('sSettings')">🌱 Попробовать снова</button>
+</div>
+
+<script>
+// ══════════════════════════════
+//  REALISTIC FIRE — Canvas particles
+// ══════════════════════════════
+const fireCanvas = document.getElementById('fireCanvas');
+const fCtx = fireCanvas.getContext('2d');
+let fireParticles = [];
+let fireAnimId = null;
+let fireActive = false;
+
+function resizeFireCanvas() {
+  fireCanvas.width = window.innerWidth;
+  fireCanvas.height = window.innerHeight;
+}
+resizeFireCanvas();
+window.addEventListener('resize', resizeFireCanvas);
+
+class FireParticle {
+  constructor() { this.reset(); }
+  reset() {
+    // spawn along the bottom-center area where tree sits
+    const cx = fireCanvas.width * 0.5;
+    const spread = fireCanvas.width * 0.35;
+    this.x = cx + (Math.random() - 0.5) * spread * 2;
+    this.y = fireCanvas.height * (0.55 + Math.random() * 0.3);
+    this.vx = (Math.random() - 0.5) * 1.8;
+    this.vy = -(1.5 + Math.random() * 3.5);
+    this.life = 0;
+    this.maxLife = 60 + Math.random() * 80;
+    this.size = 8 + Math.random() * 22;
+    this.type = Math.random() > 0.3 ? 'flame' : 'ember';
+  }
+  update() {
+    this.life++;
+    this.x += this.vx + Math.sin(this.life * 0.15) * 0.8;
+    this.y += this.vy;
+    this.vy *= 0.985; // slow down rise
+    this.vx *= 0.98;
+    this.size *= 0.988;
+    if (this.life >= this.maxLife || this.size < 0.5) this.reset();
+  }
+  draw(ctx) {
+    const t = this.life / this.maxLife;
+    const alpha = t < 0.15 ? t / 0.15 : t > 0.7 ? 1 - (t - 0.7) / 0.3 : 1;
+
+    if (this.type === 'flame') {
+      // flame — tall teardrop shape
+      const grad = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y + this.size * 0.3, this.size * 1.1);
+      if (t < 0.3) {
+        // bright white-yellow core at base
+        grad.addColorStop(0, `rgba(255,255,200,${alpha * 0.95})`);
+        grad.addColorStop(0.25, `rgba(255,220,50,${alpha * 0.88})`);
+        grad.addColorStop(0.55, `rgba(255,100,0,${alpha * 0.7})`);
+        grad.addColorStop(0.8, `rgba(200,30,0,${alpha * 0.4})`);
+        grad.addColorStop(1, `rgba(100,0,0,0)`);
+      } else {
+        // orange-red as it rises
+        grad.addColorStop(0, `rgba(255,180,30,${alpha * 0.9})`);
+        grad.addColorStop(0.3, `rgba(255,80,0,${alpha * 0.75})`);
+        grad.addColorStop(0.65, `rgba(180,20,0,${alpha * 0.45})`);
+        grad.addColorStop(1, `rgba(80,0,0,0)`);
+      }
+
+      ctx.save();
+      ctx.translate(this.x, this.y);
+      // elongate vertically for flame shape
+      ctx.scale(1, 1.6 + Math.sin(this.life * 0.1) * 0.2);
+      ctx.beginPath();
+      ctx.arc(0, 0, this.size, 0, Math.PI * 2);
+      ctx.fillStyle = grad;
+      ctx.fill();
+      ctx.restore();
+
+    } else {
+      // ember — small bright glowing dot
+      const r = this.size * 0.35;
+      const g = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, r * 2);
+      g.addColorStop(0, `rgba(255,240,180,${alpha})`);
+      g.addColorStop(0.4, `rgba(255,150,0,${alpha * 0.7})`);
+      g.addColorStop(1, `rgba(255,50,0,0)`);
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, r * 2, 0, Math.PI * 2);
+      ctx.fillStyle = g;
+      ctx.fill();
+    }
+  }
+}
+
+function initFire() {
+  fireParticles = [];
+  for (let i = 0; i < 120; i++) {
+    const p = new FireParticle();
+    p.life = Math.random() * p.maxLife; // stagger
+    fireParticles.push(p);
+  }
+}
+
+function animateFire() {
+  if (!fireActive) return;
+  fCtx.clearRect(0, 0, fireCanvas.width, fireCanvas.height);
+
+  // heat haze glow at base
+  const cx = fireCanvas.width * 0.5;
+  const baseY = fireCanvas.height * 0.78;
+  const baseGlow = fCtx.createRadialGradient(cx, baseY, 0, cx, baseY, fireCanvas.width * 0.4);
+  baseGlow.addColorStop(0, 'rgba(255,120,0,0.18)');
+  baseGlow.addColorStop(0.5, 'rgba(200,50,0,0.08)');
+  baseGlow.addColorStop(1, 'transparent');
+  fCtx.fillStyle = baseGlow;
+  fCtx.fillRect(0, 0, fireCanvas.width, fireCanvas.height);
+
+  fireParticles.forEach(p => { p.update(); p.draw(fCtx); });
+  fireAnimId = requestAnimationFrame(animateFire);
+}
+
+function startFire() {
+  fireActive = true;
+  initFire();
+  fireCanvas.classList.add('active');
+  animateFire();
+}
+
+function stopFire() {
+  fireActive = false;
+  cancelAnimationFrame(fireAnimId);
+  fCtx.clearRect(0, 0, fireCanvas.width, fireCanvas.height);
+  fireCanvas.classList.remove('active');
+}
+
+// ── TREE ──
+function setTreeProgress(p, burned) {
+  const container = document.getElementById('treeContainer');
+  const img = document.getElementById('treeImg');
+  const sun = document.getElementById('sunGlow');
+  const top = Math.max(0, 100 - p * 100);
+  container.style.clipPath = `inset(${top}% 0 0 0)`;
+  if (burned) {
+    img.className = 'tree-img burned';
+    sun.style.opacity = 0;
+  } else if (p > 0.6) {
+    img.className = 'tree-img blooming';
+    sun.style.opacity = Math.min((p - 0.6) / 0.4, 1) * 0.9;
+  } else {
+    img.className = 'tree-img';
+    sun.style.opacity = 0;
+  }
+}
+
+// ── PETALS ──
+let petalIv = null;
+function startPetals() {
+  if (petalIv) return;
+  const layer = document.getElementById('petalLayer');
+  petalIv = setInterval(() => {
+    const el = document.createElement('div'); el.className = 'pk';
+    el.innerHTML = `<svg width="11" height="8" viewBox="0 0 11 8"><ellipse cx="5.5" cy="4" rx="4.8" ry="3" fill="rgba(255,${146+~~(Math.random()*84)},176,0.84)" transform="rotate(${Math.random()*360} 5.5 4)"/></svg>`;
+    el.style.left = Math.random() * 100 + '%';
+    const d = 5 + Math.random() * 7;
+    el.style.animationDuration = d + 's';
+    el.style.animationDelay = (Math.random() * 2) + 's';
+    layer.appendChild(el);
+    setTimeout(() => el.remove(), (d + 3) * 1000);
+  }, 420);
+}
+function stopPetals() {
+  clearInterval(petalIv); petalIv = null;
+  document.getElementById('petalLayer').innerHTML = '';
+}
+
+// ── STATE ──
+let focusMins=25,breakMins=5,totalSess=2;
+let curSess=1,isWork=true,remaining=0,totalSec=0;
+let treeP=0,iv=null,armed=false;
+
+function onSlide() {
+  focusMins=+document.getElementById('rF').value;
+  breakMins=+document.getElementById('rB').value;
+  totalSess=+document.getElementById('rS').value;
+  document.getElementById('vF').textContent=focusMins+' мин';
+  document.getElementById('vB').textContent=breakMins+' мин';
+  document.getElementById('vS').textContent=totalSess;
+}
+
+function startFocus() {
+  curSess=1;isWork=true;treeP=0;armed=false;
+  setTreeProgress(0,false);
+  stopFire();
+  show('sFocus');
+  startPetals();
+  beginPhase();
+}
+
+function beginPhase() {
+  clearInterval(iv);
+  totalSec=(isWork?focusMins:breakMins)*60;
+  remaining=totalSec;
+  refreshUI();
+  iv=setInterval(tick,1000);
+}
+
+const HINTS=['Сосредоточься, Глеб 🌸','Ты в потоке 🌊','Сакура растёт...','Не отвлекайся 💪','Ещё немного!'];
+
+function tick() {
+  remaining=Math.max(0,remaining-1);
+  if(isWork){
+    const done=(curSess-1)*focusMins*60+(focusMins*60-remaining);
+    treeP=Math.min(done/(totalSess*focusMins*60),1);
+    setTreeProgress(treeP,false);
+  }
+  refreshUI();
+  if(remaining<=0){
+    clearInterval(iv);
+    if(isWork&&curSess>=totalSess) setTimeout(finishWin,500);
+    else if(isWork){isWork=false;beginPhase();}
+    else{curSess++;isWork=true;beginPhase();}
+  }
+}
+
+function refreshUI() {
+  const m=~~(remaining/60),s=remaining%60;
+  const ts=`${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  document.getElementById('tNum').textContent=ts;
+  document.getElementById('tNum').className='t-num '+(isWork?'work':'rest');
+  document.getElementById('tPhase').textContent=isWork?'ФОКУС':'ПЕРЕРЫВ';
+  document.getElementById('tPhase').className='t-phase '+(isWork?'work':'rest');
+  document.getElementById('tHint').textContent=isWork
+    ?HINTS[Math.min(~~((1-remaining/totalSec)*HINTS.length),HINTS.length-1)]
+    :'Отдохни, скоро следующая сессия ☕';
+  document.getElementById('sessBadge').textContent=`Сессия ${curSess} / ${totalSess}`;
+  const btn=document.getElementById('qBtn');
+  if(isWork){
+    btn.className='quit-btn work';
+    if(!armed){btn.textContent='🔥 СДАТЬСЯ';btn.style.fontSize='';}
+    btn.disabled=false;
+  } else {
+    btn.className='quit-btn rest';
+    btn.textContent=`☕ ПЕРЕРЫВ  ${ts}`;
+    btn.disabled=true; armed=false;
+  }
+}
+
+function onQuit() {
+  if(!isWork)return;
+  if(!armed){
+    armed=true;
+    const btn=document.getElementById('qBtn');
+    btn.textContent='❗ Ещё раз — дерево сгорит';
+    btn.style.fontSize='11px';
+    setTimeout(()=>{if(armed){armed=false;btn.textContent='🔥 СДАТЬСЯ';btn.style.fontSize='';}},2800);
+    return;
+  }
+  armed=false;
+  clearInterval(iv); stopPetals();
+  setTreeProgress(treeP,true);
+  startFire(); // реалистичный огонь!
+  setTimeout(()=>{stopFire();show('sLose');},3500);
+}
+
+function finishWin() {
+  stopPetals();
+  const xp=totalSess*focusMins*2;
+  document.getElementById('winXp').textContent=`+${xp} XP ⚡`;
+  try{const c=JSON.parse(localStorage.getItem('xp_total')||'0');localStorage.setItem('xp_total',JSON.stringify(c+xp));}catch(e){}
+  show('sWin');
+}
+
+function openSettings(){clearInterval(iv);stopPetals();stopFire();armed=false;show('sSettings');}
+
+function show(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function goHome(){window.location.href='index.html';}
+
+onSlide();
+</script>
+</body>
+</html>
