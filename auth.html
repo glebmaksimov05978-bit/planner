@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>ДЕНЬ — Вход</title>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;600;700;900&family=Golos+Text:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{width:100%;min-height:100%;background:#06041a;color:#f0e8ff;font-family:'Golos Text',sans-serif;overflow-x:hidden;}
+
+/* BG */
+.bg{position:fixed;inset:0;z-index:0;}
+.bg-grad{position:absolute;inset:0;background:linear-gradient(160deg,#06041a 0%,#0d0828 40%,#130e38 70%,#06041a 100%);}
+.star{position:absolute;border-radius:50%;background:white;animation:twinkle var(--d) ease-in-out infinite;opacity:0;}
+@keyframes twinkle{0%,100%{opacity:0}50%{opacity:var(--op)}}
+.blob{position:absolute;border-radius:50%;filter:blur(80px);animation:blobMove 8s ease-in-out infinite;}
+@keyframes blobMove{0%,100%{transform:translate(0,0)}50%{transform:translate(30px,-20px)}}
+
+/* LAYOUT */
+.wrap{position:relative;z-index:1;min-height:100dvh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 24px 40px;}
+
+/* LOGO */
+.logo{text-align:center;margin-bottom:40px;}
+.logo-icon{font-size:52px;margin-bottom:12px;display:block;filter:drop-shadow(0 0 20px rgba(255,150,200,0.5));}
+.logo-title{font-family:'Unbounded',sans-serif;font-size:28px;font-weight:900;background:linear-gradient(135deg,#f0e8ff,#ffb3cc,#c44dff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:0.04em;}
+.logo-sub{font-size:13px;color:#6050a0;margin-top:6px;letter-spacing:0.08em;}
+
+/* TABS */
+.auth-tabs{display:flex;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:4px;margin-bottom:24px;width:100%;max-width:360px;}
+.auth-tab{flex:1;padding:10px;text-align:center;font-family:'Unbounded',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.06em;color:#6050a0;cursor:pointer;border-radius:10px;transition:all 0.25s;}
+.auth-tab.active{background:linear-gradient(135deg,rgba(79,127,255,0.25),rgba(196,77,255,0.25));color:#f0e8ff;box-shadow:0 2px 12px rgba(79,127,255,0.2);}
+
+/* CARD */
+.auth-card{width:100%;max-width:360px;background:rgba(13,22,48,0.85);border:1px solid rgba(100,140,255,0.18);border-radius:24px;padding:28px 24px;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);}
+
+/* FORM */
+.field{margin-bottom:14px;}
+.field-label{font-size:12px;font-weight:600;color:#6050a0;letter-spacing:0.06em;margin-bottom:6px;display:block;}
+.field-wrap{position:relative;}
+.field-icon{position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:16px;pointer-events:none;}
+.field-input{width:100%;background:rgba(17,29,58,0.9);border:1px solid rgba(100,140,255,0.2);border-radius:12px;padding:14px 14px 14px 42px;color:#f0e8ff;font-family:'Golos Text',sans-serif;font-size:15px;outline:none;transition:border-color 0.2s;-webkit-appearance:none;}
+.field-input:focus{border-color:rgba(79,127,255,0.6);}
+.field-input::placeholder{color:#4a5a8a;}
+.field-toggle{position:absolute;right:14px;top:50%;transform:translateY(-50%);background:none;border:none;color:#4a5a8a;cursor:pointer;font-size:16px;padding:2px;}
+
+/* FORGOT */
+.forgot-link{text-align:right;margin-top:-8px;margin-bottom:14px;}
+.forgot-link a{font-size:12px;color:#4f7fff;text-decoration:none;cursor:pointer;}
+
+/* SUBMIT BTN */
+.submit-btn{width:100%;background:linear-gradient(135deg,#4f7fff,#c44dff);border:none;border-radius:14px;padding:16px;color:white;font-family:'Unbounded',sans-serif;font-size:13px;font-weight:700;letter-spacing:0.06em;cursor:pointer;box-shadow:0 6px 24px rgba(79,127,255,0.4);transition:all 0.2s;margin-bottom:16px;position:relative;overflow:hidden;}
+.submit-btn:active{opacity:0.88;transform:scale(0.98);}
+.submit-btn:disabled{opacity:0.5;cursor:not-allowed;}
+.btn-loader{display:none;position:absolute;inset:0;background:inherit;align-items:center;justify-content:center;}
+.btn-loader.show{display:flex;}
+.spinner{width:20px;height:20px;border:2px solid rgba(255,255,255,0.3);border-top-color:white;border-radius:50%;animation:spin 0.7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* DIVIDER */
+.divider{display:flex;align-items:center;gap:12px;margin-bottom:16px;}
+.divider-line{flex:1;height:1px;background:rgba(100,140,255,0.15);}
+.divider-text{font-size:11px;color:#4a5a8a;white-space:nowrap;}
+
+/* SOCIAL BTNS */
+.social-btn{width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:14px;color:#f0e8ff;font-family:'Golos Text',sans-serif;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;transition:all 0.2s;margin-bottom:10px;}
+.social-btn:active{background:rgba(255,255,255,0.1);}
+.social-icon{font-size:18px;}
+
+/* ERROR / SUCCESS */
+.msg{padding:12px 14px;border-radius:12px;font-size:13px;margin-bottom:14px;display:none;line-height:1.5;}
+.msg.error{background:rgba(255,80,80,0.12);border:1px solid rgba(255,80,80,0.3);color:#ff9090;}
+.msg.success{background:rgba(52,211,153,0.12);border:1px solid rgba(52,211,153,0.3);color:#34d399;}
+.msg.show{display:block;}
+
+/* VERIFY BANNER */
+.verify-banner{background:rgba(251,191,36,0.1);border:1px solid rgba(251,191,36,0.3);border-radius:12px;padding:12px 14px;font-size:13px;color:#fbbf24;margin-bottom:14px;display:none;line-height:1.5;}
+.verify-banner.show{display:block;}
+
+/* TERMS */
+.terms{font-size:11px;color:#4a5a8a;text-align:center;margin-top:16px;line-height:1.6;}
+.terms a{color:#4f7fff;}
+</style>
+</head>
+<body>
+
+<div class="bg">
+  <div class="bg-grad"></div>
+  <div class="blob" style="width:300px;height:300px;background:rgba(79,127,255,0.08);top:-50px;left:-80px;animation-delay:0s;"></div>
+  <div class="blob" style="width:250px;height:250px;background:rgba(196,77,255,0.07);bottom:0;right:-60px;animation-delay:3s;"></div>
+</div>
+
+<div class="wrap">
+  <!-- LOGO -->
+  <div class="logo">
+    <span class="logo-icon">🌸</span>
+    <div class="logo-title">ДЕНЬ</div>
+    <div class="logo-sub">ПЛАНИРОВЩИК</div>
+  </div>
+
+  <!-- TABS -->
+  <div class="auth-tabs">
+    <div class="auth-tab active" id="tabLogin" onclick="switchTab('login')">ВОЙТИ</div>
+    <div class="auth-tab" id="tabReg" onclick="switchTab('register')">РЕГИСТРАЦИЯ</div>
+  </div>
+
+  <!-- CARD -->
+  <div class="auth-card">
+
+    <!-- MESSAGES -->
+    <div class="msg error" id="msgError"></div>
+    <div class="msg success" id="msgSuccess"></div>
+    <div class="verify-banner" id="verifyBanner">
+      📧 Подтверди email — мы отправили письмо на твой адрес. Проверь папку Спам.
+      <br><a href="#" onclick="resendVerification()" style="color:#fbbf24;text-decoration:underline;margin-top:4px;display:inline-block">Отправить повторно</a>
+    </div>
+
+    <!-- LOGIN FORM -->
+    <div id="formLogin">
+      <div class="field">
+        <label class="field-label">EMAIL</label>
+        <div class="field-wrap">
+          <span class="field-icon">✉️</span>
+          <input class="field-input" id="loginEmail" type="email" placeholder="your@email.com" autocomplete="email">
+        </div>
+      </div>
+      <div class="field">
+        <label class="field-label">ПАРОЛЬ</label>
+        <div class="field-wrap">
+          <span class="field-icon">🔒</span>
+          <input class="field-input" id="loginPassword" type="password" placeholder="••••••••" autocomplete="current-password">
+          <button class="field-toggle" onclick="togglePwd('loginPassword',this)" type="button">👁</button>
+        </div>
+      </div>
+      <div class="forgot-link"><a onclick="showForgot()">Забыл пароль?</a></div>
+      <button class="submit-btn" id="btnLogin" onclick="doLogin()">
+        ВОЙТИ
+        <div class="btn-loader" id="loaderLogin"><div class="spinner"></div></div>
+      </button>
+    </div>
+
+    <!-- REGISTER FORM -->
+    <div id="formRegister" style="display:none">
+      <div class="field">
+        <label class="field-label">ИМЯ</label>
+        <div class="field-wrap">
+          <span class="field-icon">👤</span>
+          <input class="field-input" id="regName" type="text" placeholder="Как тебя зовут?" autocomplete="name">
+        </div>
+      </div>
+      <div class="field">
+        <label class="field-label">EMAIL</label>
+        <div class="field-wrap">
+          <span class="field-icon">✉️</span>
+          <input class="field-input" id="regEmail" type="email" placeholder="your@email.com" autocomplete="email">
+        </div>
+      </div>
+      <div class="field">
+        <label class="field-label">ПАРОЛЬ</label>
+        <div class="field-wrap">
+          <span class="field-icon">🔒</span>
+          <input class="field-input" id="regPassword" type="password" placeholder="Минимум 6 символов" autocomplete="new-password">
+          <button class="field-toggle" onclick="togglePwd('regPassword',this)" type="button">👁</button>
+        </div>
+      </div>
+      <div class="field">
+        <label class="field-label">ПОВТОРИ ПАРОЛЬ</label>
+        <div class="field-wrap">
+          <span class="field-icon">🔒</span>
+          <input class="field-input" id="regPassword2" type="password" placeholder="••••••••" autocomplete="new-password">
+          <button class="field-toggle" onclick="togglePwd('regPassword2',this)" type="button">👁</button>
+        </div>
+      </div>
+      <button class="submit-btn" id="btnReg" onclick="doRegister()">
+        СОЗДАТЬ АККАУНТ
+        <div class="btn-loader" id="loaderReg"><div class="spinner"></div></div>
+      </button>
+    </div>
+
+    <!-- FORGOT FORM -->
+    <div id="formForgot" style="display:none">
+      <div style="font-size:13px;color:#6050a0;margin-bottom:16px;line-height:1.6;">Введи свой email — пришлём ссылку для сброса пароля.</div>
+      <div class="field">
+        <label class="field-label">EMAIL</label>
+        <div class="field-wrap">
+          <span class="field-icon">✉️</span>
+          <input class="field-input" id="forgotEmail" type="email" placeholder="your@email.com" autocomplete="email">
+        </div>
+      </div>
+      <button class="submit-btn" id="btnForgot" onclick="doForgot()">
+        ОТПРАВИТЬ ПИСЬМО
+        <div class="btn-loader" id="loaderForgot"><div class="spinner"></div></div>
+      </button>
+      <div style="text-align:center;margin-top:12px;">
+        <a onclick="showLogin()" style="font-size:13px;color:#4f7fff;cursor:pointer;">← Назад ко входу</a>
+      </div>
+    </div>
+
+    <!-- DIVIDER (only on login/register) -->
+    <div class="divider" id="socialDivider">
+      <div class="divider-line"></div>
+      <div class="divider-text">или войди через</div>
+      <div class="divider-line"></div>
+    </div>
+
+    <!-- GOOGLE -->
+    <button class="social-btn" id="btnGoogle" onclick="doGoogle()">
+      <span class="social-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+      </span>
+      Продолжить с Google
+    </button>
+
+    <div class="terms">
+      Регистрируясь, ты соглашаешься с условиями использования
+    </div>
+  </div>
+</div>
+
+<!-- Firebase SDK -->
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import {
+  getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword,
+  sendPasswordResetEmail, sendEmailVerification, updateProfile,
+  GoogleAuthProvider, signInWithPopup, onAuthStateChanged
+} from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBtg0FQzADu5-B3UCkL64ZslzZeRDdlRZI",
+  authDomain: "planner-app-f1c87.firebaseapp.com",
+  projectId: "planner-app-f1c87",
+  storageBucket: "planner-app-f1c87.firebasestorage.app",
+  messagingSenderId: "828098584860",
+  appId: "1:828098584860:web:7815f5a063f35ece649ad9"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const googleProvider = new GoogleAuthProvider();
+
+// If already logged in — go to app
+onAuthStateChanged(auth, user => {
+  if (user && user.emailVerified) {
+    window.location.href = 'index.html';
+  } else if (user && !user.emailVerified) {
+    showMsg('error', 'Подтверди email перед входом. Проверь почту.');
+    document.getElementById('verifyBanner').classList.add('show');
+  }
+});
+
+// Expose to window
+window._auth = auth;
+window._googleProvider = googleProvider;
+window._firebase = {
+  signInWithEmailAndPassword, createUserWithEmailAndPassword,
+  sendPasswordResetEmail, sendEmailVerification, updateProfile,
+  signInWithPopup
+};
+
+// ── UI ──
+window.switchTab = function(tab) {
+  document.getElementById('tabLogin').classList.toggle('active', tab==='login');
+  document.getElementById('tabReg').classList.toggle('active', tab==='register');
+  document.getElementById('formLogin').style.display = tab==='login' ? 'block' : 'none';
+  document.getElementById('formRegister').style.display = tab==='register' ? 'block' : 'none';
+  document.getElementById('formForgot').style.display = 'none';
+  document.getElementById('socialDivider').style.display = 'flex';
+  document.getElementById('btnGoogle').style.display = 'flex';
+  clearMsgs();
+};
+
+window.showForgot = function() {
+  document.getElementById('formLogin').style.display = 'none';
+  document.getElementById('formRegister').style.display = 'none';
+  document.getElementById('formForgot').style.display = 'block';
+  document.getElementById('socialDivider').style.display = 'none';
+  document.getElementById('btnGoogle').style.display = 'none';
+  clearMsgs();
+};
+
+window.showLogin = function() {
+  switchTab('login');
+};
+
+window.togglePwd = function(id, btn) {
+  const inp = document.getElementById(id);
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+  btn.textContent = inp.type === 'password' ? '👁' : '🙈';
+};
+
+function showMsg(type, text) {
+  clearMsgs();
+  const el = document.getElementById('msg' + (type==='error'?'Error':'Success'));
+  el.textContent = text; el.classList.add('show');
+}
+function clearMsgs() {
+  document.getElementById('msgError').classList.remove('show');
+  document.getElementById('msgSuccess').classList.remove('show');
+}
+function setLoading(btnId, loaderId, on) {
+  document.getElementById(btnId).disabled = on;
+  document.getElementById(loaderId).classList.toggle('show', on);
+}
+
+const ERR = {
+  'auth/user-not-found': 'Пользователь не найден',
+  'auth/wrong-password': 'Неверный пароль',
+  'auth/invalid-credential': 'Неверный email или пароль',
+  'auth/email-already-in-use': 'Этот email уже зарегистрирован',
+  'auth/weak-password': 'Пароль слишком короткий (минимум 6 символов)',
+  'auth/invalid-email': 'Неверный формат email',
+  'auth/too-many-requests': 'Слишком много попыток. Попробуй позже',
+  'auth/network-request-failed': 'Ошибка сети. Проверь интернет',
+  'auth/popup-closed-by-user': 'Окно входа закрыто',
+};
+function getErrText(e) { return ERR[e.code] || e.message; }
+
+// ── LOGIN ──
+window.doLogin = async function() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const pass = document.getElementById('loginPassword').value;
+  if (!email || !pass) { showMsg('error', 'Заполни все поля'); return; }
+  setLoading('btnLogin', 'loaderLogin', true);
+  try {
+    const cred = await window._firebase.signInWithEmailAndPassword(window._auth, email, pass);
+    if (!cred.user.emailVerified) {
+      showMsg('error', 'Сначала подтверди email — письмо уже отправлено на твою почту');
+      document.getElementById('verifyBanner').classList.add('show');
+      setLoading('btnLogin', 'loaderLogin', false);
+      return;
+    }
+    window.location.href = 'index.html';
+  } catch(e) {
+    showMsg('error', getErrText(e));
+    setLoading('btnLogin', 'loaderLogin', false);
+  }
+};
+
+// ── REGISTER ──
+window.doRegister = async function() {
+  const name = document.getElementById('regName').value.trim();
+  const email = document.getElementById('regEmail').value.trim();
+  const pass = document.getElementById('regPassword').value;
+  const pass2 = document.getElementById('regPassword2').value;
+  if (!name || !email || !pass || !pass2) { showMsg('error', 'Заполни все поля'); return; }
+  if (pass !== pass2) { showMsg('error', 'Пароли не совпадают'); return; }
+  if (pass.length < 6) { showMsg('error', 'Пароль минимум 6 символов'); return; }
+  setLoading('btnReg', 'loaderReg', true);
+  try {
+    const cred = await window._firebase.createUserWithEmailAndPassword(window._auth, email, pass);
+    await window._firebase.updateProfile(cred.user, { displayName: name });
+    await window._firebase.sendEmailVerification(cred.user);
+    showMsg('success', `✅ Аккаунт создан! Письмо отправлено на ${email} — подтверди email и войди.`);
+    document.getElementById('verifyBanner').classList.add('show');
+    setTimeout(() => switchTab('login'), 3000);
+  } catch(e) {
+    showMsg('error', getErrText(e));
+  }
+  setLoading('btnReg', 'loaderReg', false);
+};
+
+// ── FORGOT PASSWORD ──
+window.doForgot = async function() {
+  const email = document.getElementById('forgotEmail').value.trim();
+  if (!email) { showMsg('error', 'Введи email'); return; }
+  setLoading('btnForgot', 'loaderForgot', true);
+  try {
+    await window._firebase.sendPasswordResetEmail(window._auth, email);
+    showMsg('success', `📧 Письмо отправлено на ${email}. Проверь папку Спам.`);
+  } catch(e) {
+    showMsg('error', getErrText(e));
+  }
+  setLoading('btnForgot', 'loaderForgot', false);
+};
+
+// ── RESEND VERIFICATION ──
+window.resendVerification = async function() {
+  const user = window._auth.currentUser;
+  if (user) {
+    try {
+      await window._firebase.sendEmailVerification(user);
+      showMsg('success', 'Письмо отправлено повторно!');
+    } catch(e) {
+      showMsg('error', getErrText(e));
+    }
+  }
+};
+
+// ── GOOGLE ──
+window.doGoogle = async function() {
+  try {
+    const cred = await window._firebase.signInWithPopup(window._auth, window._googleProvider);
+    window.location.href = 'index.html';
+  } catch(e) {
+    if (e.code !== 'auth/popup-closed-by-user') showMsg('error', getErrText(e));
+  }
+};
+
+// Enter key
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Enter') return;
+  if (document.getElementById('formLogin').style.display !== 'none') doLogin();
+  else if (document.getElementById('formRegister').style.display !== 'none') doRegister();
+  else if (document.getElementById('formForgot').style.display !== 'none') doForgot();
+});
+</script>
+
+<script>
+// Stars
+(function(){
+  const wrap = document.querySelector('.bg');
+  for(let i=0;i<40;i++){
+    const s=document.createElement('div');s.className='star';
+    const sz=Math.random()*2+0.5;
+    s.style.cssText=`width:${sz}px;height:${sz}px;left:${Math.random()*100}%;top:${Math.random()*100}%;--d:${(Math.random()*4+2).toFixed(1)}s;--op:${(Math.random()*0.4+0.1).toFixed(2)};animation-delay:${(Math.random()*5).toFixed(1)}s`;
+    wrap.appendChild(s);
+  }
+})();
+</script>
+</body>
+</html>
