@@ -1251,9 +1251,11 @@ function syncToCalendar() {
 
   // ── 1. RECURRING TASKS: one VEVENT each, with RRULE, real recurrence ──
   recurringTasks.forEach(rt => {
-    if (!rt.time) return; // recurring tasks without time skip (rare case)
     const rrule = buildRRule(rt);
     if (!rrule) return;
+
+    const hasTime = !!rt.time;
+    const effectiveTime = hasTime ? rt.time : morningTime;
 
     // anchor date: today if matches pattern, else find next matching day within 7 days, else just use createdKey
     let anchorKey = null;
@@ -1268,21 +1270,25 @@ function syncToCalendar() {
     }
     if (!anchorKey) anchorKey = rt.createdKey || todayKey();
 
-    const dtStart = formatICSDate(anchorKey, rt.time);
-    const endTime = rt.endTime || addMinutesToTime(rt.time, rt.duration || 30);
+    const dtStart = formatICSDate(anchorKey, effectiveTime);
+    const endTime = hasTime ? (rt.endTime || addMinutesToTime(rt.time, rt.duration || 30)) : addMinutesToTime(effectiveTime, 60);
     const dtEnd = formatICSDate(anchorKey, endTime);
     const emoji = getCatEmoji(rt.cat);
     const label = getCatLabel(rt.cat);
+    const summary = hasTime ? `${emoji} ${rt.name}` : `⏰ Запланируй время: ${rt.name}`;
+    const description = hasTime
+      ? `Категория: ${label}${rt.note ? '\\n' + rt.note : ''}`
+      : `Задача без фиксированного времени — сделай когда удобно`;
 
     lines.push('BEGIN:VEVENT');
     lines.push(`UID:recurring-${rt.id}@planner`);
     lines.push(`DTSTART:${dtStart}`);
     lines.push(`DTEND:${dtEnd}`);
     lines.push(rrule);
-    lines.push(`SUMMARY:${emoji} ${rt.name}`);
-    lines.push(`DESCRIPTION:Категория: ${label}${rt.note ? '\\n' + rt.note : ''}`);
+    lines.push(`SUMMARY:${summary}`);
+    lines.push(`DESCRIPTION:${description}`);
     lines.push(`CATEGORIES:${label}`);
-    if (reminderMins > 0) {
+    if (reminderMins > 0 && hasTime) {
       lines.push('BEGIN:VALARM');
       lines.push('ACTION:DISPLAY');
       lines.push(`DESCRIPTION:Скоро: ${rt.name}`);
