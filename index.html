@@ -195,6 +195,26 @@ body{background:var(--bg);color:var(--text);font-family:'Golos Text',sans-serif;
 .draft-empty{text-align:center;padding:48px 20px;color:var(--muted);}
 .draft-empty-icon{font-size:40px;margin-bottom:12px;}
 
+/* DRAFT FOLDERS */
+.draft-folder{margin-bottom:10px;border-radius:16px;overflow:hidden;background:var(--surface);border:1px solid var(--border);backdrop-filter:blur(10px);}
+.draft-folder-header{display:flex;align-items:center;gap:10px;padding:14px;cursor:pointer;}
+.draft-folder-header:active{background:rgba(255,255,255,0.03);}
+.draft-folder-emoji{font-size:18px;}
+.draft-folder-name{flex:1;font-size:14px;font-weight:600;}
+.draft-folder-count{font-size:11px;color:var(--muted);background:var(--surface2);padding:2px 9px;border-radius:10px;font-weight:600;}
+.draft-folder-arrow{font-size:12px;color:var(--muted);transition:transform 0.25s;}
+.draft-folder.open .draft-folder-arrow{transform:rotate(90deg);}
+.draft-folder-items{display:none;padding:0 12px 12px;}
+.draft-folder.open .draft-folder-items{display:block;}
+
+/* OVERDUE */
+.task-card.overdue{border-color:rgba(255,107,107,0.35);}
+.task-card.overdue .task-time{color:#ff7070;font-weight:700;}
+.overdue-tag{font-size:10px;color:#ff7070;font-weight:700;background:rgba(255,107,107,0.12);padding:2px 7px;border-radius:8px;}
+
+/* EDIT BTN */
+.edit-time-btn{background:rgba(79,127,255,0.12);border:1px solid rgba(79,127,255,0.3);border-radius:8px;padding:4px 8px;color:var(--accent);font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;}
+
 /* MODALS */
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:200;display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity 0.3s;backdrop-filter:blur(4px);}
 .modal-overlay.open{opacity:1;pointer-events:all;}
@@ -299,7 +319,8 @@ body{background:var(--bg);color:var(--text);font-family:'Golos Text',sans-serif;
         <option value="mid">🟡 Средний</option>
       </select>
     </div>
-    <input type="time" class="modal-time-input" id="weekAddTime" style="margin-bottom:14px">
+    <input type="time" class="modal-time-input" id="weekAddTime" style="margin-bottom:10px" onchange="onWeekAddTimeChange()">
+    <select class="form-select" id="weekAddDuration" style="width:100%;margin-bottom:14px;padding:12px 14px;font-size:14px;"></select>
     <button class="modal-confirm-btn" onclick="confirmWeekAdd()">＋ ДОБАВИТЬ</button>
   </div>
 </div>
@@ -312,8 +333,10 @@ body{background:var(--bg);color:var(--text);font-family:'Golos Text',sans-serif;
     <div class="modal-task-name" id="planModalTaskName">—</div>
     <div class="modal-label">Дата</div>
     <input type="date" class="modal-date-input" id="planDate" style="margin-bottom:14px">
-    <div class="modal-label">Время <span style="color:var(--muted);font-size:11px">(необязательно)</span></div>
-    <input type="time" class="modal-time-input" id="planTime" style="margin-bottom:8px">
+    <div class="modal-label">Время начала <span style="color:var(--muted);font-size:11px">(необязательно)</span></div>
+    <input type="time" class="modal-time-input" id="planTime" style="margin-bottom:10px" onchange="onPlanTimeChange()">
+    <div class="modal-label">Длительность</div>
+    <select class="form-select" id="planDuration" style="width:100%;margin-bottom:8px;padding:12px 14px;font-size:14px;"></select>
     <div class="modal-hint">Если не указать время — утром того дня придёт уведомление</div>
     <button class="modal-confirm-btn" onclick="confirmPlan()">✓ ЗАПЛАНИРОВАТЬ</button>
   </div>
@@ -323,10 +346,12 @@ body{background:var(--bg);color:var(--text);font-family:'Golos Text',sans-serif;
 <div class="modal-overlay" id="setTimeModalOverlay" onclick="closeSetTimeModal(event)">
   <div class="set-time-modal">
     <div class="modal-handle"></div>
-    <div class="modal-title">Укажи время</div>
+    <div class="modal-title" id="setTimeModalTitle">Укажи время</div>
     <div class="modal-task-name" id="setTimeTaskName">—</div>
-    <div class="modal-label">Время</div>
-    <input type="time" class="modal-time-input" id="setTimeInput" style="margin-bottom:14px">
+    <div class="modal-label">Время начала</div>
+    <input type="time" class="modal-time-input" id="setTimeInput" style="margin-bottom:10px" onchange="onSetTimeChange()">
+    <div class="modal-label">Длительность</div>
+    <select class="form-select" id="setTimeDuration" style="width:100%;margin-bottom:14px;padding:12px 14px;font-size:14px;"></select>
     <button class="modal-confirm-btn" onclick="confirmSetTime()">✓ СОХРАНИТЬ</button>
   </div>
 </div>
@@ -378,8 +403,11 @@ body{background:var(--bg);color:var(--text);font-family:'Golos Text',sans-serif;
         </select>
       </div>
       <div class="form-row">
-        <input class="form-select" id="fTime" type="time" style="flex:1">
-        <select class="form-select" id="fRepeat" style="flex:2">
+        <input class="form-select" id="fTime" type="time" style="flex:1" onchange="onFTimeChange()">
+        <select class="form-select" id="fDuration" style="flex:1"></select>
+      </div>
+      <div class="form-row">
+        <select class="form-select" id="fRepeat" style="flex:1">
           <option value="none">Не повторять</option><option value="daily">🔁 Каждый день</option>
           <option value="weekly">📅 Каждую неделю</option><option value="workdays">💼 Пн–Пт</option>
         </select>
@@ -430,6 +458,9 @@ body{background:var(--bg);color:var(--text);font-family:'Golos Text',sans-serif;
     <div class="draft-input-wrap">
       <textarea class="draft-textarea" id="draftInput" placeholder="Напиши дело или идею..."></textarea>
       <button class="draft-add-btn" onclick="addDraftItem()">＋</button>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:8px;">
+      <select class="form-select" id="draftCat" style="flex:1"></select>
     </div>
   </div>
   <div class="draft-list" id="draftList"></div>
@@ -634,6 +665,7 @@ function addCategory(){
   renderCatManager();
   buildCatOptions('fCat',null);
   buildCatOptions('weekAddCat',null);
+  buildCatOptions('draftCat',null);
 }
 
 function deleteCategory(id){
@@ -644,12 +676,49 @@ function deleteCategory(id){
   renderCatManager();
   buildCatOptions('fCat',null);
   buildCatOptions('weekAddCat',null);
+  buildCatOptions('draftCat',null);
 }
 
 // CORE
 const DAYS=['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
 const MONTHS=['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
 const REPEAT_LABEL={daily:'🔁 ежедневно',weekly:'📅 еженедельно',workdays:'💼 Пн–Пт'};
+
+// ══════════════════════════════
+//  DURATION HELPERS
+// ══════════════════════════════
+// builds list: 5,10,...,60 step5; then 70,80,...120 step10; then by 30 up to 4h
+function buildDurationOptionsList(){
+  const opts=[];
+  for(let m=5;m<=60;m+=5)opts.push(m);
+  for(let m=70;m<=120;m+=10)opts.push(m);
+  for(let m=150;m<=240;m+=30)opts.push(m);
+  return opts;
+}
+function formatDuration(mins){
+  if(mins<60)return `${mins} мин`;
+  const h=Math.floor(mins/60),m=mins%60;
+  return m===0?`${h} ч`:`${h} ч ${m} мин`;
+}
+function buildDurationSelect(selectId,selectedVal){
+  const sel=document.getElementById(selectId);if(!sel)return;
+  sel.innerHTML='';
+  buildDurationOptionsList().forEach(m=>{
+    const opt=document.createElement('option');opt.value=m;opt.textContent=formatDuration(m);
+    if(m===(selectedVal||30))opt.selected=true;
+    sel.appendChild(opt);
+  });
+}
+function addMinutesToTime(timeStr,mins){
+  const[h,m]=timeStr.split(':').map(Number);
+  const total=h*60+m+mins;
+  const nh=Math.floor(total/60)%24,nm=total%60;
+  return `${String(nh).padStart(2,'0')}:${String(nm).padStart(2,'0')}`;
+}
+function onFTimeChange(){} // placeholder, duration select stays as is
+function onPlanTimeChange(){}
+function onWeekAddTimeChange(){}
+function onSetTimeChange(){}
 
 let viewOffset=0,weekOffset=0;
 let xp=load('xp_total',0),streak=load('streak',0);
@@ -766,22 +835,38 @@ function unscheduledCardHTML(t,key){
   </div>`;
 }
 
+function isTaskOverdue(t){
+  if(!t.time||t.done)return false;
+  if(viewOffset!==0)return false; // only flag today's tasks
+  const endStr=t.endTime||addMinutesToTime(t.time,t.duration||30);
+  const now=new Date();
+  const[eh,em]=endStr.split(':').map(Number);
+  const endDate=new Date();endDate.setHours(eh,em,0,0);
+  return now>endDate;
+}
+
 function taskHTML(t){
   const color=getCatColor(t.cat);
-  return `<div class="task-card${t.done?' done':''}" id="card-${t.id}">
+  const overdue=isTaskOverdue(t);
+  const endStr=t.endTime||(t.time?addMinutesToTime(t.time,t.duration||30):'');
+  return `<div class="task-card${t.done?' done':''}${overdue?' overdue':''}" id="card-${t.id}">
     <div style="position:absolute;left:0;top:0;bottom:0;width:3px;background:${color};border-radius:3px 0 0 3px;"></div>
     <div class="task-check" onclick="toggleTask('${t.id}')">${t.done?'✓':''}</div>
     <div class="task-body">
       <div class="task-name">${t.name}</div>
       <div class="task-meta">
         <span class="task-cat" style="color:${color}">${getCatEmoji(t.cat)} ${getCatLabel(t.cat)}</span>
-        ${t.time?`<span class="task-time">⏰ ${t.time}</span>`:''}
+        ${t.time?`<span class="task-time">⏰ ${t.time}${endStr?'–'+endStr:''}</span>`:''}
+        ${overdue?'<span class="overdue-tag">⏱ Время прошло</span>':''}
         ${t.priority==='high'?'<span>🔴</span>':t.priority==='mid'?'<span>🟡</span>':''}
         ${t.repeat&&t.repeat!=='none'?`<span class="task-repeat">${REPEAT_LABEL[t.repeat]||''}</span>`:''}
       </div>
       ${t.note?`<div class="task-note">${t.note}</div>`:''}
     </div>
-    <div class="task-right"><button class="task-delete" onclick="deleteTask('${t.id}')">✕</button></div>
+    <div class="task-right">
+      ${t.time?`<button class="edit-time-btn" onclick="openSetTimeModal('${t.id}','${offsetToKey(viewOffset)}')">✎</button>`:''}
+      <button class="task-delete" onclick="deleteTask('${t.id}')">✕</button>
+    </div>
   </div>`;
 }
 
@@ -812,17 +897,20 @@ function deleteTask(id){
 
 function toggleForm(){
   const f=document.getElementById('addForm');f.classList.toggle('open');
-  if(f.classList.contains('open')){buildCatOptions('fCat',null);document.getElementById('fName').focus();}
+  if(f.classList.contains('open')){buildCatOptions('fCat',null);buildDurationSelect('fDuration',30);document.getElementById('fName').focus();}
 }
 
 function saveTask(){
   const name=document.getElementById('fName').value.trim();if(!name){document.getElementById('fName').focus();return;}
   const repeat=document.getElementById('fRepeat').value,key=offsetToKey(viewOffset);
-  const task={id:Date.now().toString(),name,note:document.getElementById('fNote').value.trim(),cat:document.getElementById('fCat').value,priority:document.getElementById('fPriority').value,time:document.getElementById('fTime').value,repeat,done:false,createdKey:key};
+  const duration=+document.getElementById('fDuration').value||30;
+  const time=document.getElementById('fTime').value;
+  const task={id:Date.now().toString(),name,note:document.getElementById('fNote').value.trim(),cat:document.getElementById('fCat').value,priority:document.getElementById('fPriority').value,time,duration,endTime:time?addMinutesToTime(time,duration):'',repeat,done:false,createdKey:key};
   if(repeat!=='none'){recurringTasks.push({...task});save('recurring_tasks',recurringTasks);}
   let tasks=getDayTasks(key);tasks.push(task);saveDayTasks(key,tasks);
   ['fName','fNote','fTime'].forEach(i=>document.getElementById(i).value='');
   document.getElementById('fPriority').value='normal';document.getElementById('fRepeat').value='none';
+  buildDurationSelect('fDuration',30);
   document.getElementById('addForm').classList.remove('open');
   renderTasks();renderWeekStrip();
   if(load('notif_enabled',false)){cancelAllNotifications();scheduleTaskNotifications();}
@@ -879,7 +967,7 @@ function renderWeekScreen(){
       ...pending.map(t=>`<div class="week-task-item">
         <div class="week-task-dot" style="background:${getCatColor(t.cat)}"></div>
         <div class="week-task-info"><div class="week-task-name">${t.name}</div><div class="week-task-meta">${getCatLabel(t.cat)}${t.priority==='high'?' · 🔴':t.priority==='mid'?' · 🟡':''}</div></div>
-        <div class="week-task-time">${t.time||''}</div></div>`),
+        <div class="week-task-time">${t.time?t.time+(t.endTime?'–'+t.endTime:''):''}</div></div>`),
       ...(done.length?[`<button class="week-done-toggle" onclick="toggleWeekDone(this)">✓ Выполнено (${done.length})</button><div class="week-done-list" style="display:none">${done.map(t=>`<div class="week-task-item done-item">
         <div class="week-task-dot" style="background:${getCatColor(t.cat)}"></div>
         <div class="week-task-info"><div class="week-task-name">${t.name}</div><div class="week-task-meta">${getCatLabel(t.cat)}</div></div>
@@ -921,13 +1009,16 @@ function openWeekAddModal(key){
   buildCatOptions('weekAddCat','личное');
   document.getElementById('weekAddPriority').value='normal';
   document.getElementById('weekAddTime').value='';
+  buildDurationSelect('weekAddDuration',30);
   document.getElementById('weekAddModalOverlay').classList.add('open');
   setTimeout(()=>document.getElementById('weekAddName').focus(),300);
 }
 function closeWeekAddModal(e){if(e.target===document.getElementById('weekAddModalOverlay'))document.getElementById('weekAddModalOverlay').classList.remove('open');}
 function confirmWeekAdd(){
   const name=document.getElementById('weekAddName').value.trim();if(!name){document.getElementById('weekAddName').focus();return;}
-  const task={id:Date.now().toString(),name,note:'',cat:document.getElementById('weekAddCat').value,priority:document.getElementById('weekAddPriority').value,time:document.getElementById('weekAddTime').value,repeat:'none',done:false,createdKey:currentWeekAddKey};
+  const time=document.getElementById('weekAddTime').value;
+  const duration=+document.getElementById('weekAddDuration').value||30;
+  const task={id:Date.now().toString(),name,note:'',cat:document.getElementById('weekAddCat').value,priority:document.getElementById('weekAddPriority').value,time,duration,endTime:time?addMinutesToTime(time,duration):'',repeat:'none',done:false,createdKey:currentWeekAddKey};
   let tasks=load('tasks_'+currentWeekAddKey,[]);tasks.push(task);save('tasks_'+currentWeekAddKey,tasks);
   document.getElementById('weekAddModalOverlay').classList.remove('open');
   renderWeekScreen();
@@ -938,14 +1029,53 @@ function confirmWeekAdd(){
 // DRAFT
 function addDraftItem(){
   const text=document.getElementById('draftInput').value.trim();if(!text)return;
-  const drafts=load('drafts',[]);drafts.push({id:Date.now().toString(),text,created:Date.now()});
+  const cat=document.getElementById('draftCat').value;
+  const drafts=load('drafts',[]);drafts.push({id:Date.now().toString(),text,cat,created:Date.now()});
   save('drafts',drafts);document.getElementById('draftInput').value='';renderDraft();
 }
 function deleteDraftItem(id){save('drafts',load('drafts',[]).filter(d=>d.id!==id));renderDraft();}
+
+let openDraftFolders=load('open_draft_folders',[]);
+
+function toggleDraftFolder(catId){
+  const idx=openDraftFolders.indexOf(catId);
+  if(idx>=0)openDraftFolders.splice(idx,1);
+  else openDraftFolders.push(catId);
+  save('open_draft_folders',openDraftFolders);
+  renderDraft();
+}
+
 function renderDraft(){
   const drafts=load('drafts',[]),list=document.getElementById('draftList');
   if(!drafts.length){list.innerHTML=`<div class="draft-empty"><div class="draft-empty-icon">💭</div><div style="font-size:14px;font-weight:500;margin-bottom:6px">Черновик пуст</div><div style="font-size:13px;color:var(--muted)">Записывай идеи и планируй когда будешь готов</div></div>`;return;}
-  list.innerHTML=drafts.map(d=>`<div class="draft-item" id="draft-${d.id}"><div class="draft-item-header"><div class="draft-bullet"></div><div class="draft-item-text">${d.text}</div><button class="draft-item-delete" onclick="deleteDraftItem('${d.id}')">✕</button></div><button class="draft-plan-btn" onclick="openPlanModal('${d.id}')">📅 Запланировать</button></div>`).join('');
+
+  // group by category — folder doesn't show if no tasks in that cat
+  const cats=loadCats();
+  const grouped={};
+  drafts.forEach(d=>{
+    const cid=d.cat||'личное';
+    if(!grouped[cid])grouped[cid]=[];
+    grouped[cid].push(d);
+  });
+
+  let html='';
+  cats.forEach(c=>{
+    const items=grouped[c.id];
+    if(!items||!items.length)return;
+    const isOpen=openDraftFolders.includes(c.id);
+    html+=`<div class="draft-folder${isOpen?' open':''}">
+      <div class="draft-folder-header" onclick="toggleDraftFolder('${c.id}')">
+        <span class="draft-folder-emoji">${c.emoji}</span>
+        <span class="draft-folder-name">${c.label}</span>
+        <span class="draft-folder-count">${items.length}</span>
+        <span class="draft-folder-arrow">›</span>
+      </div>
+      <div class="draft-folder-items">
+        ${items.map(d=>`<div class="draft-item" id="draft-${d.id}"><div class="draft-item-header"><div class="draft-bullet"></div><div class="draft-item-text">${d.text}</div><button class="draft-item-delete" onclick="deleteDraftItem('${d.id}')">✕</button></div><button class="draft-plan-btn" onclick="openPlanModal('${d.id}')">📅 Запланировать</button></div>`).join('')}
+      </div>
+    </div>`;
+  });
+  list.innerHTML=html;
 }
 function openPlanModal(draftId){
   currentPlanDraftId=draftId;
@@ -953,6 +1083,7 @@ function openPlanModal(draftId){
   document.getElementById('planModalTaskName').textContent=draft.text;
   document.getElementById('planDate').value=dateToKey(new Date());
   document.getElementById('planTime').value='';
+  buildDurationSelect('planDuration',30);
   document.getElementById('planModalOverlay').classList.add('open');
 }
 function closePlanModal(e){if(e.target===document.getElementById('planModalOverlay'))document.getElementById('planModalOverlay').classList.remove('open');}
@@ -960,8 +1091,9 @@ function confirmPlan(){
   if(!currentPlanDraftId)return;
   const drafts=load('drafts',[]),draft=drafts.find(d=>d.id===currentPlanDraftId);if(!draft)return;
   const dateVal=document.getElementById('planDate').value,timeVal=document.getElementById('planTime').value;
+  const duration=+document.getElementById('planDuration').value||30;
   if(!dateVal){alert('Выбери дату');return;}
-  const task={id:Date.now().toString(),name:draft.text,note:'',cat:'личное',priority:'normal',time:timeVal||'',repeat:'none',done:false,createdKey:dateVal,fromDraft:true};
+  const task={id:Date.now().toString(),name:draft.text,note:'',cat:draft.cat||'личное',priority:'normal',time:timeVal||'',duration,endTime:timeVal?addMinutesToTime(timeVal,duration):'',repeat:'none',done:false,createdKey:dateVal,fromDraft:true};
   let tasks=load('tasks_'+dateVal,[]);tasks.push(task);save('tasks_'+dateVal,tasks);
   save('drafts',drafts.filter(d=>d.id!==currentPlanDraftId));
   document.getElementById('planModalOverlay').classList.remove('open');
@@ -976,14 +1108,18 @@ function openSetTimeModal(taskId,key){
   currentSetTimeTaskId=taskId;currentSetTimeKey=key;
   const t=getDayTasks(key).find(t=>t.id===taskId);if(!t)return;
   document.getElementById('setTimeTaskName').textContent=t.name;
-  document.getElementById('setTimeInput').value='';
+  document.getElementById('setTimeModalTitle').textContent=t.time?'Изменить время':'Укажи время';
+  document.getElementById('setTimeInput').value=t.time||'';
+  buildDurationSelect('setTimeDuration',t.duration||30);
   document.getElementById('setTimeModalOverlay').classList.add('open');
 }
 function closeSetTimeModal(e){if(e.target===document.getElementById('setTimeModalOverlay'))document.getElementById('setTimeModalOverlay').classList.remove('open');}
 function confirmSetTime(){
   const timeVal=document.getElementById('setTimeInput').value;if(!timeVal){alert('Укажи время');return;}
+  const duration=+document.getElementById('setTimeDuration').value||30;
   const tasks=getDayTasks(currentSetTimeKey),t=tasks.find(t=>t.id===currentSetTimeTaskId);if(!t)return;
-  t.time=timeVal;saveDayTasks(currentSetTimeKey,tasks);
+  t.time=timeVal;t.duration=duration;t.endTime=addMinutesToTime(timeVal,duration);
+  saveDayTasks(currentSetTimeKey,tasks);
   document.getElementById('setTimeModalOverlay').classList.remove('open');
   renderTasks();renderWeekStrip();
   if(load('notif_enabled',false)){cancelAllNotifications();scheduleTaskNotifications();}
@@ -1033,11 +1169,7 @@ function syncToCalendar() {
       if (t.time) {
         // task with time → calendar event with 2 reminders
         const dtStart = formatICSDate(key, t.time);
-        // end = start + 30min
-        const [h2, m2] = t.time.split(':').map(Number);
-        const endMin = m2 + 30;
-        const endH = h2 + Math.floor(endMin / 60);
-        const endTime = `${String(endH % 24).padStart(2,'0')}:${String(endMin % 60).padStart(2,'0')}`;
+        const endTime = t.endTime || addMinutesToTime(t.time, t.duration || 30);
         const dtEnd = formatICSDate(key, endTime);
         const emoji = getCatEmoji(t.cat);
         const label = getCatLabel(t.cat);
@@ -1165,8 +1297,12 @@ document.getElementById('morningNotifTime').value=load('morning_notif_time','09:
 document.getElementById('calReminderBefore').value=load('cal_reminder_before',10);
 buildCatOptions('fCat',null);
 buildCatOptions('weekAddCat','личное');
+buildCatOptions('draftCat','личное');
+buildDurationSelect('fDuration',30);
 registerSW().then(()=>{updateNotifUI();setTimeout(scheduleTaskNotifications,2000);setTimeout(scheduleMorningNotifications,2500);});
 refresh();
+// re-render every 60s so overdue tags update live
+setInterval(()=>{ if(document.getElementById('screenToday').classList.contains('active')) renderTasks(); }, 60000);
 </script>
 </body>
-</html> 
+</html>
