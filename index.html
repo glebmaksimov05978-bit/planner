@@ -178,7 +178,7 @@ body{background:var(--bg);color:var(--text);font-family:'Golos Text',sans-serif;
 .draft-title{font-family:'Unbounded',sans-serif;font-size:20px;font-weight:700;margin-bottom:4px;}
 .draft-sub{font-size:13px;color:var(--muted);}
 .draft-add{margin:0 16px 16px;}
-.draft-input-wrap{display:flex;gap:8px;align-items:flex-start;}
+.draft-input-wrap{display:flex;gap:8px;align-items:stretch;}
 .draft-textarea{flex:1;background:var(--surface);border:1px solid var(--border2);border-radius:14px;padding:14px;color:var(--text);font-family:'Golos Text',sans-serif;font-size:15px;resize:none;height:52px;outline:none;transition:border-color 0.2s;backdrop-filter:blur(10px);}
 .draft-textarea:focus{border-color:var(--accent);height:80px;}
 .draft-textarea::placeholder{color:var(--muted);}
@@ -457,10 +457,8 @@ body{background:var(--bg);color:var(--text);font-family:'Golos Text',sans-serif;
   <div class="draft-add">
     <div class="draft-input-wrap">
       <textarea class="draft-textarea" id="draftInput" placeholder="Напиши дело или идею..."></textarea>
+      <select class="form-select" id="draftCat" style="width:84px;flex:none;align-self:flex-start;height:52px;"></select>
       <button class="draft-add-btn" onclick="addDraftItem()">＋</button>
-    </div>
-    <div style="display:flex;gap:8px;margin-top:8px;">
-      <select class="form-select" id="draftCat" style="flex:1"></select>
     </div>
   </div>
   <div class="draft-list" id="draftList"></div>
@@ -955,8 +953,8 @@ function renderWeekScreen(){
     const tasks=getDayTasks(key);
     const isToday=key===todayKey();
     const block=document.createElement('div');block.className='week-day-block';
-    const unscheduled=tasks.filter(t=>t.fromDraft&&!t.time);
-    const scheduled=tasks.filter(t=>!t.fromDraft||t.time);
+    const unscheduled=tasks.filter(t=>t.fromDraft&&!t.time&&!t.done);
+    const scheduled=tasks.filter(t=>!t.fromDraft||t.time||t.done);
     const pending=scheduled.filter(t=>!t.done).sort((a,b)=>{if(a.time&&b.time)return a.time.localeCompare(b.time);if(a.time)return -1;if(b.time)return 1;return 0;});
     const done=scheduled.filter(t=>t.done);
     const allItems=[
@@ -1047,6 +1045,10 @@ function toggleDraftFolder(catId){
 
 function renderDraft(){
   const drafts=load('drafts',[]),list=document.getElementById('draftList');
+  // migrate old drafts without cat field
+  let migrated=false;
+  drafts.forEach(d=>{ if(!d.cat){ d.cat='личное'; migrated=true; } });
+  if(migrated) save('drafts',drafts);
   if(!drafts.length){list.innerHTML=`<div class="draft-empty"><div class="draft-empty-icon">💭</div><div style="font-size:14px;font-weight:500;margin-bottom:6px">Черновик пуст</div><div style="font-size:13px;color:var(--muted)">Записывай идеи и планируй когда будешь готов</div></div>`;return;}
 
   // group by category — folder doesn't show if no tasks in that cat
@@ -1059,6 +1061,9 @@ function renderDraft(){
   });
 
   let html='';
+  const availableCatIds=cats.filter(c=>grouped[c.id]&&grouped[c.id].length).map(c=>c.id);
+  // auto-open all folders on first render after migration so nothing looks "lost"
+  if(migrated) { openDraftFolders=[...availableCatIds]; save('open_draft_folders',openDraftFolders); }
   cats.forEach(c=>{
     const items=grouped[c.id];
     if(!items||!items.length)return;
