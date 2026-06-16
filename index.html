@@ -107,6 +107,12 @@ body{background:var(--bg);color:var(--text);font-family:'Golos Text',sans-serif;
 .btn-save{flex:1;background:linear-gradient(135deg,#4f7fff,#a78bfa);border:none;border-radius:10px;padding:13px;color:white;font-family:'Unbounded',sans-serif;font-size:11px;font-weight:700;cursor:pointer;letter-spacing:0.05em;box-shadow:0 4px 15px rgba(79,127,255,0.35);transition:opacity 0.2s;}
 .btn-save:active{opacity:0.8;}
 .btn-cancel{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:13px 16px;color:var(--muted);font-family:'Golos Text',sans-serif;font-size:14px;cursor:pointer;}
+
+/* WEEKDAY PICKER */
+.weekday-picker{display:flex;gap:5px;}
+.wd-btn{flex:1;aspect-ratio:1;border-radius:10px;background:var(--surface2);border:1px solid var(--border);color:var(--muted);font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:'Unbounded',sans-serif;transition:all 0.15s;}
+.wd-btn.sel{background:linear-gradient(135deg,#4f7fff,#a78bfa);color:white;border-color:transparent;}
+.wd-btn:active{transform:scale(0.92);}
 .task-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:13px 14px;margin-bottom:9px;display:flex;align-items:flex-start;gap:11px;backdrop-filter:blur(10px);transition:all 0.25s;position:relative;overflow:hidden;}
 .task-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:3px 0 0 3px;}
 .task-card.done{opacity:0.42;}
@@ -320,7 +326,12 @@ body{background:var(--bg);color:var(--text);font-family:'Golos Text',sans-serif;
       </select>
     </div>
     <input type="time" class="modal-time-input" id="weekAddTime" style="margin-bottom:10px" onchange="onWeekAddTimeChange()">
-    <select class="form-select" id="weekAddDuration" style="width:100%;margin-bottom:14px;padding:12px 14px;font-size:14px;"></select>
+    <select class="form-select" id="weekAddDuration" style="width:100%;margin-bottom:10px;padding:12px 14px;font-size:14px;"></select>
+    <select class="form-select" id="weekAddRepeat" style="width:100%;margin-bottom:10px;padding:12px 14px;font-size:14px;" onchange="onRepeatChange('weekAddRepeat','weekAddWeekdays')">
+      <option value="none">Не повторять</option><option value="daily">🔁 Каждый день</option>
+      <option value="weekly">📅 По дням недели</option><option value="workdays">💼 Пн–Пт</option>
+    </select>
+    <div class="weekday-picker" id="weekAddWeekdays" style="display:none;margin-bottom:14px;"></div>
     <button class="modal-confirm-btn" onclick="confirmWeekAdd()">＋ ДОБАВИТЬ</button>
   </div>
 </div>
@@ -407,11 +418,12 @@ body{background:var(--bg);color:var(--text);font-family:'Golos Text',sans-serif;
         <select class="form-select" id="fDuration" style="flex:1"></select>
       </div>
       <div class="form-row">
-        <select class="form-select" id="fRepeat" style="flex:1">
+        <select class="form-select" id="fRepeat" style="flex:1" onchange="onRepeatChange('fRepeat','fWeekdays')">
           <option value="none">Не повторять</option><option value="daily">🔁 Каждый день</option>
-          <option value="weekly">📅 Каждую неделю</option><option value="workdays">💼 Пн–Пт</option>
+          <option value="weekly">📅 По дням недели</option><option value="workdays">💼 Пн–Пт</option>
         </select>
       </div>
+      <div class="weekday-picker" id="fWeekdays" style="display:none;margin-bottom:10px;"></div>
       <div class="form-actions">
         <button class="btn-save" onclick="saveTask()">ДОБАВИТЬ</button>
         <button class="btn-cancel" onclick="toggleForm()">✕</button>
@@ -680,7 +692,15 @@ function deleteCategory(id){
 // CORE
 const DAYS=['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
 const MONTHS=['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
-const REPEAT_LABEL={daily:'🔁 ежедневно',weekly:'📅 еженедельно',workdays:'💼 Пн–Пт'};
+const REPEAT_LABEL={daily:'🔁 ежедневно',weekly:'📅 по дням',workdays:'💼 Пн–Пт'};
+function repeatLabelFor(t){
+  if(!t.repeat||t.repeat==='none')return '';
+  if(t.repeat==='weekly'&&t.weekdays&&t.weekdays.length){
+    const names=t.weekdays.map(dow=>WD_LABELS[WD_JS_MAP.indexOf(dow)]).join(',');
+    return `📅 ${names}`;
+  }
+  return REPEAT_LABEL[t.repeat]||'';
+}
 
 // ══════════════════════════════
 //  DURATION HELPERS
@@ -718,6 +738,48 @@ function onPlanTimeChange(){}
 function onWeekAddTimeChange(){}
 function onSetTimeChange(){}
 
+// ══════════════════════════════
+//  WEEKDAY PICKER (for "weekly" repeat)
+// ══════════════════════════════
+const WD_LABELS=['Пн','Вт','Ср','Чт','Пт','Сб','Вс']; // ISO order, Mon first
+const WD_JS_MAP=[1,2,3,4,5,6,0]; // index -> JS getDay() value
+let selectedWeekdays={}; // per-picker-id state, e.g. {fWeekdays:[1,3]}
+
+function onRepeatChange(selectId,pickerId){
+  const val=document.getElementById(selectId).value;
+  const picker=document.getElementById(pickerId);
+  if(val==='weekly'){
+    picker.style.display='flex';
+    if(!selectedWeekdays[pickerId])selectedWeekdays[pickerId]=[new Date().getDay()];
+    renderWeekdayPicker(pickerId);
+  } else {
+    picker.style.display='none';
+  }
+}
+
+function renderWeekdayPicker(pickerId){
+  const picker=document.getElementById(pickerId);
+  const sel=selectedWeekdays[pickerId]||[];
+  picker.innerHTML=WD_LABELS.map((label,i)=>{
+    const dow=WD_JS_MAP[i];
+    const isSel=sel.includes(dow);
+    return `<div class="wd-btn${isSel?' sel':''}" onclick="toggleWeekday('${pickerId}',${dow})">${label}</div>`;
+  }).join('');
+}
+
+function toggleWeekday(pickerId,dow){
+  if(!selectedWeekdays[pickerId])selectedWeekdays[pickerId]=[];
+  const arr=selectedWeekdays[pickerId];
+  const idx=arr.indexOf(dow);
+  if(idx>=0){ if(arr.length>1) arr.splice(idx,1); } // keep at least 1 selected
+  else arr.push(dow);
+  renderWeekdayPicker(pickerId);
+}
+
+function getSelectedWeekdays(pickerId){
+  return selectedWeekdays[pickerId]||[new Date().getDay()];
+}
+
 let viewOffset=0,weekOffset=0;
 let xp=load('xp_total',0),streak=load('streak',0);
 let lastDoneDay=load('last_done_day',null),bestStreak=load('best_streak',0),doneTotal=load('done_total',0);
@@ -738,7 +800,10 @@ function getDayTasks(key){
     if(tasks.some(t=>t.recurringId===rt.id))return;
     let ok=false;
     if(rt.repeat==='daily')ok=true;
-    if(rt.repeat==='weekly'){const o=keyToDate(rt.createdKey);ok=o.getDay()===dow;}
+    if(rt.repeat==='weekly'){
+      if(rt.weekdays&&rt.weekdays.length){ ok=rt.weekdays.includes(dow); }
+      else { const o=keyToDate(rt.createdKey); ok=o.getDay()===dow; } // backward compat
+    }
     if(rt.repeat==='workdays')ok=dow>=1&&dow<=5;
     if(ok)tasks.push({...rt,id:rt.id+'_'+key,recurringId:rt.id,done:false});
   });
@@ -857,7 +922,7 @@ function taskHTML(t){
         ${t.time?`<span class="task-time">⏰ ${t.time}${endStr?'–'+endStr:''}</span>`:''}
         ${overdue?'<span class="overdue-tag">⏱ Время прошло</span>':''}
         ${t.priority==='high'?'<span>🔴</span>':t.priority==='mid'?'<span>🟡</span>':''}
-        ${t.repeat&&t.repeat!=='none'?`<span class="task-repeat">${REPEAT_LABEL[t.repeat]||''}</span>`:''}
+        ${t.repeat&&t.repeat!=='none'?`<span class="task-repeat">${repeatLabelFor(t)}</span>`:''}
       </div>
       ${t.note?`<div class="task-note">${t.note}</div>`:''}
     </div>
@@ -903,11 +968,13 @@ function saveTask(){
   const repeat=document.getElementById('fRepeat').value,key=offsetToKey(viewOffset);
   const duration=+document.getElementById('fDuration').value||30;
   const time=document.getElementById('fTime').value;
-  const task={id:Date.now().toString(),name,note:document.getElementById('fNote').value.trim(),cat:document.getElementById('fCat').value,priority:document.getElementById('fPriority').value,time,duration,endTime:time?addMinutesToTime(time,duration):'',repeat,done:false,createdKey:key};
+  const weekdays=repeat==='weekly'?getSelectedWeekdays('fWeekdays'):null;
+  const task={id:Date.now().toString(),name,note:document.getElementById('fNote').value.trim(),cat:document.getElementById('fCat').value,priority:document.getElementById('fPriority').value,time,duration,endTime:time?addMinutesToTime(time,duration):'',repeat,weekdays,done:false,createdKey:key};
   if(repeat!=='none'){recurringTasks.push({...task});save('recurring_tasks',recurringTasks);}
   let tasks=getDayTasks(key);tasks.push(task);saveDayTasks(key,tasks);
   ['fName','fNote','fTime'].forEach(i=>document.getElementById(i).value='');
   document.getElementById('fPriority').value='normal';document.getElementById('fRepeat').value='none';
+  document.getElementById('fWeekdays').style.display='none';
   buildDurationSelect('fDuration',30);
   document.getElementById('addForm').classList.remove('open');
   renderTasks();renderWeekStrip();
@@ -1007,6 +1074,8 @@ function openWeekAddModal(key){
   buildCatOptions('weekAddCat','личное');
   document.getElementById('weekAddPriority').value='normal';
   document.getElementById('weekAddTime').value='';
+  document.getElementById('weekAddRepeat').value='none';
+  document.getElementById('weekAddWeekdays').style.display='none';
   buildDurationSelect('weekAddDuration',30);
   document.getElementById('weekAddModalOverlay').classList.add('open');
   setTimeout(()=>document.getElementById('weekAddName').focus(),300);
@@ -1016,7 +1085,10 @@ function confirmWeekAdd(){
   const name=document.getElementById('weekAddName').value.trim();if(!name){document.getElementById('weekAddName').focus();return;}
   const time=document.getElementById('weekAddTime').value;
   const duration=+document.getElementById('weekAddDuration').value||30;
-  const task={id:Date.now().toString(),name,note:'',cat:document.getElementById('weekAddCat').value,priority:document.getElementById('weekAddPriority').value,time,duration,endTime:time?addMinutesToTime(time,duration):'',repeat:'none',done:false,createdKey:currentWeekAddKey};
+  const repeat=document.getElementById('weekAddRepeat').value;
+  const weekdays=repeat==='weekly'?getSelectedWeekdays('weekAddWeekdays'):null;
+  const task={id:Date.now().toString(),name,note:'',cat:document.getElementById('weekAddCat').value,priority:document.getElementById('weekAddPriority').value,time,duration,endTime:time?addMinutesToTime(time,duration):'',repeat,weekdays,done:false,createdKey:currentWeekAddKey};
+  if(repeat!=='none'){recurringTasks.push({...task});save('recurring_tasks',recurringTasks);}
   let tasks=load('tasks_'+currentWeekAddKey,[]);tasks.push(task);save('tasks_'+currentWeekAddKey,tasks);
   document.getElementById('weekAddModalOverlay').classList.remove('open');
   renderWeekScreen();
@@ -1148,8 +1220,21 @@ function makeUID() {
   return 'task-' + Date.now() + '-' + Math.random().toString(36).slice(2) + '@planner';
 }
 
+// ICS day codes for RRULE BYDAY (Sunday=SU per RFC5545)
+const ICS_DAY_CODES=['SU','MO','TU','WE','TH','FR','SA']; // index = JS getDay()
+
+function buildRRule(t){
+  if(t.repeat==='daily')return 'RRULE:FREQ=DAILY';
+  if(t.repeat==='workdays')return 'RRULE:FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR';
+  if(t.repeat==='weekly'){
+    const wds=(t.weekdays&&t.weekdays.length)?t.weekdays:[new Date().getDay()];
+    const byday=wds.map(dow=>ICS_DAY_CODES[dow]).join(',');
+    return `RRULE:FREQ=WEEKLY;BYDAY=${byday}`;
+  }
+  return null;
+}
+
 function syncToCalendar() {
-  // collect tasks with time for today and next 6 days
   const lines = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
@@ -1162,17 +1247,68 @@ function syncToCalendar() {
   const morningTime = load('morning_notif_time', '09:00');
   const [mh, mm] = morningTime.split(':');
   let eventCount = 0;
+  const addedRecurringIds = new Set();
 
-  // sync today + 6 days ahead
+  // ── 1. RECURRING TASKS: one VEVENT each, with RRULE, real recurrence ──
+  recurringTasks.forEach(rt => {
+    if (!rt.time) return; // recurring tasks without time skip (rare case)
+    const rrule = buildRRule(rt);
+    if (!rrule) return;
+
+    // anchor date: today if matches pattern, else find next matching day within 7 days, else just use createdKey
+    let anchorKey = null;
+    for (let offset = 0; offset <= 6; offset++) {
+      const key = offsetToKey(offset);
+      const dow = keyToDate(key).getDay();
+      let matches = false;
+      if (rt.repeat === 'daily') matches = true;
+      else if (rt.repeat === 'workdays') matches = dow >= 1 && dow <= 5;
+      else if (rt.repeat === 'weekly') matches = (rt.weekdays && rt.weekdays.length) ? rt.weekdays.includes(dow) : keyToDate(rt.createdKey).getDay() === dow;
+      if (matches) { anchorKey = key; break; }
+    }
+    if (!anchorKey) anchorKey = rt.createdKey || todayKey();
+
+    const dtStart = formatICSDate(anchorKey, rt.time);
+    const endTime = rt.endTime || addMinutesToTime(rt.time, rt.duration || 30);
+    const dtEnd = formatICSDate(anchorKey, endTime);
+    const emoji = getCatEmoji(rt.cat);
+    const label = getCatLabel(rt.cat);
+
+    lines.push('BEGIN:VEVENT');
+    lines.push(`UID:recurring-${rt.id}@planner`);
+    lines.push(`DTSTART:${dtStart}`);
+    lines.push(`DTEND:${dtEnd}`);
+    lines.push(rrule);
+    lines.push(`SUMMARY:${emoji} ${rt.name}`);
+    lines.push(`DESCRIPTION:Категория: ${label}${rt.note ? '\\n' + rt.note : ''}`);
+    lines.push(`CATEGORIES:${label}`);
+    if (reminderMins > 0) {
+      lines.push('BEGIN:VALARM');
+      lines.push('ACTION:DISPLAY');
+      lines.push(`DESCRIPTION:Скоро: ${rt.name}`);
+      lines.push(`TRIGGER:-PT${reminderMins}M`);
+      lines.push('END:VALARM');
+    }
+    lines.push('BEGIN:VALARM');
+    lines.push('ACTION:DISPLAY');
+    lines.push(`DESCRIPTION:Начинается: ${rt.name}`);
+    lines.push('TRIGGER:PT0S');
+    lines.push('END:VALARM');
+    lines.push('END:VEVENT');
+    eventCount++;
+    addedRecurringIds.add(rt.id);
+  });
+
+  // ── 2. ONE-OFF TASKS: today + next 6 days, skip anything already covered by a recurring rule ──
   for (let offset = 0; offset <= 6; offset++) {
     const key = offsetToKey(offset);
     const tasks = getDayTasks(key);
 
     tasks.forEach(t => {
       if (t.done) return;
+      if (t.recurringId && addedRecurringIds.has(t.recurringId)) return; // already covered by RRULE event
 
       if (t.time) {
-        // task with time → calendar event with 2 reminders
         const dtStart = formatICSDate(key, t.time);
         const endTime = t.endTime || addMinutesToTime(t.time, t.duration || 30);
         const dtEnd = formatICSDate(key, endTime);
@@ -1187,7 +1323,6 @@ function syncToCalendar() {
         lines.push(`DESCRIPTION:Категория: ${label}${t.note ? '\\n' + t.note : ''}`);
         lines.push(`CATEGORIES:${label}`);
 
-        // reminder 1: X minutes before
         if (reminderMins > 0) {
           lines.push('BEGIN:VALARM');
           lines.push('ACTION:DISPLAY');
@@ -1195,7 +1330,6 @@ function syncToCalendar() {
           lines.push(`TRIGGER:-PT${reminderMins}M`);
           lines.push('END:VALARM');
         }
-        // reminder 2: at the time
         lines.push('BEGIN:VALARM');
         lines.push('ACTION:DISPLAY');
         lines.push(`DESCRIPTION:Начинается: ${t.name}`);
@@ -1206,7 +1340,6 @@ function syncToCalendar() {
         eventCount++;
 
       } else if (offset === 0) {
-        // task without time today → morning reminder
         const dtMorning = formatICSDate(key, morningTime);
         const endMorning = `${String((+mh + 1) % 24).padStart(2,'0')}:${mm}`;
         const dtMorningEnd = formatICSDate(key, endMorning);
