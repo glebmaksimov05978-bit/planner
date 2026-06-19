@@ -354,10 +354,11 @@ body{background:var(--bg);color:var(--text);font-family:'Golos Text',sans-serif;
     <div style="display:flex;gap:8px;margin-bottom:10px;">
       <select class="form-select" id="weekAddCat" style="flex:1"></select>
       <select class="form-select" id="weekAddPriority" style="flex:1">
-        <option value="normal">Приоритет</option>
-        <option value="high">🔴 Высокий</option>
-        <option value="mid">🟡 Средний</option>
-        <option value="low">🔵 Низкий</option>
+        <option value="normal">— Приоритет</option>
+        <option value="q1">🔴 Срочно+Важно</option>
+        <option value="q2">🟢 Важно</option>
+        <option value="q3">🟡 Срочно</option>
+        <option value="q4">⚫ Не важно</option>
       </select>
     </div>
     <input type="time" class="modal-time-input" id="weekAddTime" style="margin-bottom:10px" onchange="onWeekAddTimeChange()">
@@ -443,12 +444,19 @@ body{background:var(--bg);color:var(--text);font-family:'Golos Text',sans-serif;
       <textarea class="form-textarea" id="fNote" placeholder="Заметка..."></textarea>
       <div class="form-row">
         <select class="form-select" id="fCat"></select>
-        <select class="form-select" id="fPriority">
-          <option value="normal">Приоритет</option><option value="high">🔴 Высокий</option><option value="mid">🟡 Средний</option><option value="low">🔵 Низкий</option>
+        <select class="form-select" id="fPriority" onchange="onPriorityChange(this)">
+          <option value="normal">— Приоритет</option>
+          <option value="q1">🔴 Срочно+Важно</option>
+          <option value="q2">🟢 Важно</option>
+          <option value="q3">🟡 Срочно</option>
+          <option value="q4">⚫ Не важно</option>
         </select>
       </div>
       <div class="form-row">
-        <input class="form-select" id="fTime" type="time" style="flex:1" onchange="onFTimeChange()">
+        <div style="flex:1;position:relative;">
+          <input class="form-select" id="fTime" type="time" style="width:100%;color:var(--text);" onchange="onFTimeChange()">
+          <span id="fTimePlaceholder" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:13px;pointer-events:none;">🕐 Время</span>
+        </div>
         <select class="form-select" id="fDuration" style="flex:1"></select>
       </div>
       <div class="form-row">
@@ -488,6 +496,7 @@ body{background:var(--bg);color:var(--text);font-family:'Golos Text',sans-serif;
   <div class="week-header">
     <div class="week-title" id="weekRangeLabel">Эта неделя</div>
     <div class="week-nav">
+      <button class="week-nav-btn" onclick="openMatrixWeek()" style="font-size:14px;">🎯</button>
       <button class="week-nav-btn" onclick="shiftWeek(-1)">‹</button>
       <button class="week-nav-btn" onclick="shiftWeek(0)">•</button>
       <button class="week-nav-btn" onclick="shiftWeek(1)">›</button>
@@ -769,10 +778,18 @@ function addMinutesToTime(timeStr,mins){
   const nh=Math.floor(total/60)%24,nm=total%60;
   return `${String(nh).padStart(2,'0')}:${String(nm).padStart(2,'0')}`;
 }
-function onFTimeChange(){} // placeholder, duration select stays as is
-function onPlanTimeChange(){}
-function onWeekAddTimeChange(){}
-function onSetTimeChange(){}
+const PRIORITY_SORT={q1:0,q2:1,q3:2,normal:3,q4:4,high:0,mid:1,low:3}; // backward compat for old tasks
+const PRIORITY_ICON={q1:'🔴',q2:'🟢',q3:'🟡',q4:'⚫',high:'🔴',mid:'🟡',low:'🔵'};
+const PRIORITY_COLOR={q1:'#fb7185',q2:'#34d399',q3:'#fbbf24',q4:'#94a3b8',high:'#fb7185',mid:'#fbbf24',low:'#60a5fa'};
+
+function onPriorityChange(sel){
+  // make muted when placeholder selected
+  sel.style.color = sel.value==='normal' ? 'var(--muted)' : 'var(--text)';
+}
+function onFTimeChange(){
+  const ph=document.getElementById('fTimePlaceholder');
+  if(ph) ph.style.display=document.getElementById('fTime').value?'none':'block';
+}
 
 // ══════════════════════════════
 //  WEEKDAY PICKER (for "weekly" repeat)
@@ -910,7 +927,12 @@ function renderTasks(){
   const c=document.getElementById('taskList');
   const regular=tasks.filter(t=>t.time||t.done);
   if(!regular.length&&!unscheduled.length){c.innerHTML=`<div class="empty-state"><div class="empty-icon">🌌</div><div class="empty-text">Задач нет.<br>Добавь первую!</div></div>`;return;}
-  const sorted=[...regular].sort((a,b)=>{const p={high:0,mid:1,normal:2,low:3};if(p[a.priority]!==p[b.priority])return p[a.priority]-p[b.priority];if(a.time&&b.time)return a.time.localeCompare(b.time);if(a.time)return -1;if(b.time)return 1;return 0;});
+  const sorted=[...regular].sort((a,b)=>{
+    const pa=PRIORITY_SORT[a.priority||'normal']??3, pb=PRIORITY_SORT[b.priority||'normal']??3;
+    if(pa!==pb)return pa-pb;
+    if(a.time&&b.time)return a.time.localeCompare(b.time);
+    if(a.time)return -1; if(b.time)return 1; return 0;
+  });
   const pending=sorted.filter(t=>!t.done),done=sorted.filter(t=>t.done);
   let html='';
   pending.forEach(t=>{html+=taskHTML(t);});
@@ -920,6 +942,7 @@ function renderTasks(){
 
 function unscheduledCardHTML(t,key){
   const color=getCatColor(t.cat);
+  const isPast=viewOffset<0;
   return `<div class="task-card unscheduled" id="card-${t.id}" style="--cat-color:${color}">
     <div style="position:absolute;left:0;top:0;bottom:0;width:3px;background:${color};border-radius:3px 0 0 3px;"></div>
     <div class="task-check" onclick="toggleTask('${t.id}')">${t.done?'✓':''}</div>
@@ -928,7 +951,10 @@ function unscheduledCardHTML(t,key){
       <div class="task-meta"><span class="task-cat" style="color:${color}">${getCatEmoji(t.cat)} ${getCatLabel(t.cat)}</span></div>
     </div>
     <div class="task-right">
-      <button class="set-time-btn" onclick="openSetTimeModal('${t.id}','${key}')">⏰ Время</button>
+      ${isPast
+        ? `<button class="edit-time-btn" style="background:rgba(52,211,153,0.12);border-color:rgba(52,211,153,0.3);color:#34d399;" onclick="rescheduleToToday('${t.id}')">→ Сегодня</button>`
+        : `<button class="set-time-btn" onclick="openSetTimeModal('${t.id}','${key}')">⏰ Время</button>`
+      }
       <button class="task-delete" onclick="deleteTask('${t.id}')">✕</button>
     </div>
   </div>`;
@@ -949,8 +975,13 @@ function taskHTML(t){
   const overdue=isTaskOverdue(t);
   const endStr=t.endTime||(t.time?addMinutesToTime(t.time,t.duration||30):'');
   const isPast=viewOffset<0&&!t.done;
+  const key=offsetToKey(viewOffset);
+  const prio=t.priority||'normal';
+  const prioIcon=PRIORITY_ICON[prio]||'';
+  const prioColor=PRIORITY_COLOR[prio]||'';
+  const showPrio=prio&&prio!=='normal';
   return `<div class="task-card${t.done?' done':''}${overdue?' overdue':''}" id="card-${t.id}">
-    <div style="position:absolute;left:0;top:0;bottom:0;width:3px;background:${color};border-radius:3px 0 0 3px;"></div>
+    <div style="position:absolute;left:0;top:0;bottom:0;width:3px;background:${showPrio?prioColor:color};border-radius:3px 0 0 3px;"></div>
     <div class="task-check" onclick="toggleTask('${t.id}')">${t.done?'✓':''}</div>
     <div class="task-body">
       <div class="task-name">${t.name}</div>
@@ -958,14 +989,14 @@ function taskHTML(t){
         <span class="task-cat" style="color:${color}">${getCatEmoji(t.cat)} ${getCatLabel(t.cat)}</span>
         ${t.time?`<span class="task-time">⏰ ${t.time}${endStr?'–'+endStr:''}</span>`:''}
         ${overdue?'<span class="overdue-tag">⏱ Время прошло</span>':''}
-        ${t.priority==='high'?'<span>🔴</span>':t.priority==='mid'?'<span>🟡</span>':t.priority==='low'?'<span>🔵</span>':''}
+        ${showPrio?`<span style="font-size:11px;color:${prioColor};font-weight:600;">${prioIcon}</span>`:''}
         ${t.repeat&&t.repeat!=='none'?`<span class="task-repeat">${repeatLabelFor(t)}</span>`:''}
       </div>
       ${t.note?`<div class="task-note">${t.note}</div>`:''}
     </div>
     <div class="task-right">
       ${isPast?`<button class="edit-time-btn" style="background:rgba(52,211,153,0.12);border-color:rgba(52,211,153,0.3);color:#34d399;" onclick="rescheduleToToday('${t.id}')">→ Сегодня</button>`:''}
-      ${t.time&&!isPast?`<button class="edit-time-btn" onclick="openSetTimeModal('${t.id}','${offsetToKey(viewOffset)}')">✎</button>`:''}
+      ${t.time&&!isPast?`<button class="edit-time-btn" onclick="openSetTimeModal('${t.id}','${key}')">✎</button>`:''}
       <button class="task-delete" onclick="deleteTask('${t.id}')">✕</button>
     </div>
   </div>`;
@@ -1048,23 +1079,70 @@ const QUADRANTS=[
   {id:'q3',label:'🟡 СРОЧНО',sub:'Делегируй/быстро',color:'#fbbf24',cls:'q3'},
   {id:'q4',label:'⚫ НЕ ВАЖНО',sub:'Удали/отложи',color:'#94a3b8',cls:'q4'},
 ];
-function openMatrix(){renderMatrix();document.getElementById('matrixOverlay').classList.add('open');}
-function closeMatrix(){document.getElementById('matrixOverlay').classList.remove('open');}
-function getMatrixData(){return load('matrix_'+offsetToKey(viewOffset),{});}
-function saveMatrixData(data){save('matrix_'+offsetToKey(viewOffset),data);}
-function assignQuadrant(taskId,qId){const data=getMatrixData();data[taskId]=qId;saveMatrixData(data);renderMatrix();}
-function unassignQuadrant(taskId){const data=getMatrixData();delete data[taskId];saveMatrixData(data);renderMatrix();}
+function openMatrix(){
+  _matrixWeekKey=null;
+  renderMatrix();
+  document.getElementById('matrixOverlay').classList.add('open');
+}
+function openMatrixWeek(){
+  // open matrix with all tasks from current week combined
+  _matrixWeekKey='week';
+  renderMatrix();
+  document.getElementById('matrixOverlay').classList.add('open');
+}
+function closeMatrix(){document.getElementById('matrixOverlay').classList.remove('open');refresh();}
+
+let _matrixWeekKey=null;
+
+function getMatrixTasks(){
+  if(_matrixWeekKey==='week'){
+    // all non-done tasks across the current week
+    const monday=getWeekMonday(weekOffset);
+    const tasks=[];
+    for(let i=0;i<7;i++){
+      const d=new Date(monday);d.setDate(monday.getDate()+i);
+      const key=dateToKey(d);
+      getDayTasks(key).filter(t=>!t.done).forEach(t=>{ if(!tasks.find(x=>x.id===t.id)) tasks.push({...t,_key:key}); });
+    }
+    return tasks;
+  }
+  return getDayTasks(offsetToKey(viewOffset)).filter(t=>!t.done).map(t=>({...t,_key:offsetToKey(viewOffset)}));
+}
+
+function assignQuadrant(taskId,qId,taskKey){
+  // save priority directly on the task
+  const key=taskKey||offsetToKey(viewOffset);
+  const tasks=getDayTasks(key);
+  const t=tasks.find(t=>t.id===taskId||t.id.startsWith(taskId));
+  if(t){t.priority=qId;saveDayTasks(key,tasks);}
+  // also update recurring task if applicable
+  if(t&&t.recurringId){
+    const rt=recurringTasks.find(r=>r.id===t.recurringId);
+    if(rt){rt.priority=qId;save('recurring_tasks',recurringTasks);}
+  }
+  renderMatrix();
+}
+
+function unassignQuadrant(taskId,taskKey){
+  const key=taskKey||offsetToKey(viewOffset);
+  const tasks=getDayTasks(key);
+  const t=tasks.find(t=>t.id===taskId);
+  if(t){t.priority='normal';saveDayTasks(key,tasks);}
+  renderMatrix();
+}
+
 function renderMatrix(){
-  const key=offsetToKey(viewOffset);
-  const tasks=getDayTasks(key).filter(t=>!t.done);
-  const data=getMatrixData();
+  const tasks=getMatrixTasks();
+  const title=_matrixWeekKey==='week'?'🎯 Приоритеты недели':'🎯 Матрица приоритетов';
+  document.querySelector('.matrix-title').textContent=title;
+
   document.getElementById('matrixGrid').innerHTML=QUADRANTS.map(q=>{
-    const qTasks=tasks.filter(t=>data[t.id]===q.id);
+    const qTasks=tasks.filter(t=>t.priority===q.id);
     return `<div class="matrix-quadrant" style="border-color:${q.color}33">
       <div class="matrix-q-header" style="color:${q.color}">${q.label}</div>
       <div class="matrix-q-sub">${q.sub}</div>
       <div class="matrix-q-tasks">
-        ${qTasks.map(t=>`<div class="matrix-task-chip" onclick="unassignQuadrant('${t.id}')">
+        ${qTasks.map(t=>`<div class="matrix-task-chip" onclick="unassignQuadrant('${t.id}','${t._key}')">
           <div class="mchip-dot" style="background:${getCatColor(t.cat)}"></div>
           <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px">${t.name}</span>
           <span style="font-size:9px;opacity:0.4">✕</span>
@@ -1073,16 +1151,26 @@ function renderMatrix(){
       </div>
     </div>`;
   }).join('');
-  const unassigned=tasks.filter(t=>!data[t.id]);
+
+  const unassigned=tasks.filter(t=>!t.priority||t.priority==='normal');
   const ua=document.getElementById('matrixUnassigned');
-  if(!unassigned.length){ua.innerHTML=`<div style="text-align:center;padding:20px;color:var(--muted);font-size:13px">✅ Все задачи распределены</div>`;return;}
+  if(!unassigned.length){
+    ua.innerHTML=`<div style="text-align:center;padding:20px;color:var(--muted);font-size:13px">✅ Все задачи распределены</div>`;
+    return;
+  }
   ua.innerHTML=`<div class="matrix-unassigned-label">Распредели задачи (${unassigned.length})</div>
   ${unassigned.map(t=>`<div class="matrix-assign-card">
-    <div class="matrix-assign-name">${getCatEmoji(t.cat)} ${t.name}</div>
+    <div class="matrix-assign-name">${getCatEmoji(t.cat)} ${t.name}${_matrixWeekKey==='week'?`<span style="font-size:10px;color:var(--muted);margin-left:6px">${dateLabel(t._key)}</span>`:''}</div>
     <div class="matrix-assign-btns">
-      ${QUADRANTS.map(q=>`<button class="matrix-assign-btn ${q.cls}" onclick="assignQuadrant('${t.id}','${q.id}')">${q.label}</button>`).join('')}
+      ${QUADRANTS.map(q=>`<button class="matrix-assign-btn ${q.cls}" onclick="assignQuadrant('${t.id}','${q.id}','${t._key}')">${q.label}</button>`).join('')}
     </div>
   </div>`).join('')}`;
+}
+
+function dateLabel(key){
+  const d=keyToDate(key),today=todayKey();
+  if(key===today)return 'сегодня';
+  return `${DAYS[d.getDay()]} ${d.getDate()}`;
 }
 
 function switchCtab(tab){
@@ -1549,4 +1637,3 @@ setInterval(()=>{ if(document.getElementById('screenToday').classList.contains('
 </script>
 </body>
 </html>
-
