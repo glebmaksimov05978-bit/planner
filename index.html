@@ -372,6 +372,21 @@ body{background:var(--bg);color:var(--text);font-family:'Golos Text',sans-serif;
   </div>
 </div>
 
+<!-- RESCHEDULE MODAL -->
+<div class="modal-overlay" id="rescheduleModalOverlay" onclick="closeRescheduleModal(event)">
+  <div class="plan-modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Перенести задачу</div>
+    <div class="modal-task-name" id="rescheduleTaskName">—</div>
+    <div class="modal-label">На какую дату</div>
+    <input type="date" class="modal-date-input" id="rescheduleDate" style="margin-bottom:14px">
+    <div class="modal-label">Время <span style="color:var(--muted);font-size:11px">(необязательно)</span></div>
+    <input type="time" class="modal-time-input" id="rescheduleTime" style="margin-bottom:8px">
+    <div class="modal-hint">Если не указать время — задача попадёт в "Не запланировано"</div>
+    <button class="modal-confirm-btn" onclick="confirmReschedule()">→ ПЕРЕНЕСТИ</button>
+  </div>
+</div>
+
 <!-- PLAN MODAL -->
 <div class="modal-overlay" id="planModalOverlay" onclick="closePlanModal(event)">
   <div class="plan-modal">
@@ -515,6 +530,13 @@ body{background:var(--bg);color:var(--text);font-family:'Golos Text',sans-serif;
     <div class="draft-input-wrap">
       <textarea class="draft-textarea" id="draftInput" placeholder="Напиши дело или идею..."></textarea>
       <select class="form-select" id="draftCat" style="width:84px;flex:none;align-self:flex-start;height:52px;"></select>
+      <select class="form-select" id="draftPriority" style="width:52px;flex:none;align-self:flex-start;height:52px;font-size:16px;">
+        <option value="normal">—</option>
+        <option value="q1">🔴</option>
+        <option value="q2">🟢</option>
+        <option value="q3">🟡</option>
+        <option value="q4">⚫</option>
+      </select>
       <button class="draft-add-btn" onclick="addDraftItem()">＋</button>
     </div>
   </div>
@@ -952,7 +974,7 @@ function unscheduledCardHTML(t,key){
     </div>
     <div class="task-right">
       ${isPast
-        ? `<button class="edit-time-btn" style="background:rgba(52,211,153,0.12);border-color:rgba(52,211,153,0.3);color:#34d399;" onclick="rescheduleToToday('${t.id}')">→ Сегодня</button>`
+        ? `<button class="edit-time-btn" style="background:rgba(52,211,153,0.12);border-color:rgba(52,211,153,0.3);color:#34d399;" onclick="openRescheduleModal('${t.id}','${key}')">→ Перенести</button>`
         : `<button class="set-time-btn" onclick="openSetTimeModal('${t.id}','${key}')">⏰ Время</button>`
       }
       <button class="task-delete" onclick="deleteTask('${t.id}')">✕</button>
@@ -995,7 +1017,7 @@ function taskHTML(t){
       ${t.note?`<div class="task-note">${t.note}</div>`:''}
     </div>
     <div class="task-right">
-      ${isPast?`<button class="edit-time-btn" style="background:rgba(52,211,153,0.12);border-color:rgba(52,211,153,0.3);color:#34d399;" onclick="rescheduleToToday('${t.id}')">→ Сегодня</button>`:''}
+      ${isPast?`<button class="edit-time-btn" style="background:rgba(52,211,153,0.12);border-color:rgba(52,211,153,0.3);color:#34d399;" onclick="openRescheduleModal('${t.id}','${key}')">→ Перенести</button>`:''}
       ${t.time&&!isPast?`<button class="edit-time-btn" onclick="openSetTimeModal('${t.id}','${key}')">✎</button>`:''}
       <button class="task-delete" onclick="deleteTask('${t.id}')">✕</button>
     </div>
@@ -1050,21 +1072,38 @@ function saveTask(){
   if(load('notif_enabled',false)){cancelAllNotifications();scheduleTaskNotifications();}
 }
 
-function rescheduleToToday(id){
-  const key=offsetToKey(viewOffset);
-  const tasks=getDayTasks(key);
-  const t=tasks.find(t=>t.id===id);if(!t)return;
-  // add to today without time (lands in unscheduled section)
-  const todayTasks=getDayTasks(todayKey());
-  if(todayTasks.some(tt=>tt.name===t.name&&!tt.done))return; // already there
-  const newTask={...t,id:Date.now().toString(),time:'',endTime:'',done:false,createdKey:todayKey(),fromDraft:false,recurringId:undefined};
-  todayTasks.push(newTask);
-  saveDayTasks(todayKey(),todayTasks);
-  // mark original as done so it doesn't keep showing
+let _rescheduleTaskId=null, _rescheduleFromKey=null;
+
+function openRescheduleModal(id, fromKey){
+  _rescheduleTaskId=id; _rescheduleFromKey=fromKey;
+  const tasks=getDayTasks(fromKey);
+  const t=tasks.find(t=>t.id===id);
+  document.getElementById('rescheduleTaskName').textContent=t?t.name:'';
+  document.getElementById('rescheduleDate').value=dateToKey(new Date()); // default today
+  document.getElementById('rescheduleTime').value='';
+  document.getElementById('rescheduleModalOverlay').classList.add('open');
+}
+function closeRescheduleModal(e){
+  if(e.target===document.getElementById('rescheduleModalOverlay'))
+    document.getElementById('rescheduleModalOverlay').classList.remove('open');
+}
+function confirmReschedule(){
+  const toKey=document.getElementById('rescheduleDate').value;
+  const timeVal=document.getElementById('rescheduleTime').value;
+  if(!toKey){alert('Выбери дату');return;}
+  const fromTasks=getDayTasks(_rescheduleFromKey);
+  const t=fromTasks.find(t=>t.id===_rescheduleTaskId);
+  if(!t)return;
+  // add to target day
+  const toTasks=getDayTasks(toKey);
+  toTasks.push({...t, id:Date.now().toString(), time:timeVal||'', endTime:timeVal?addMinutesToTime(timeVal,t.duration||30):'', done:false, createdKey:toKey, fromDraft:false, recurringId:undefined});
+  saveDayTasks(toKey,toTasks);
+  // mark original done so it disappears
   t.done=true;
-  saveDayTasks(key,tasks);
+  saveDayTasks(_rescheduleFromKey,fromTasks);
+  document.getElementById('rescheduleModalOverlay').classList.remove('open');
   refresh();
-  showCalToast('Задача перенесена на сегодня');
+  showCalToast('Задача перенесена на '+toKey);
 }
 function refresh(){setHeader();renderWeekStrip();renderTasks();}
 function showXpPopup(){const e=document.getElementById('xpPopup');e.classList.add('show');setTimeout(()=>e.classList.remove('show'),850);}
@@ -1287,8 +1326,13 @@ function confirmWeekAdd(){
 function addDraftItem(){
   const text=document.getElementById('draftInput').value.trim();if(!text)return;
   const cat=document.getElementById('draftCat').value;
-  const drafts=load('drafts',[]);drafts.push({id:Date.now().toString(),text,cat,created:Date.now()});
-  save('drafts',drafts);document.getElementById('draftInput').value='';renderDraft();
+  const priority=document.getElementById('draftPriority').value||'normal';
+  const drafts=load('drafts',[]);
+  drafts.push({id:Date.now().toString(),text,cat,priority,created:Date.now()});
+  save('drafts',drafts);
+  document.getElementById('draftInput').value='';
+  document.getElementById('draftPriority').value='normal';
+  renderDraft();
 }
 function deleteDraftItem(id){save('drafts',load('drafts',[]).filter(d=>d.id!==id));renderDraft();}
 
@@ -1327,15 +1371,30 @@ function renderDraft(){
     const items=grouped[c.id];
     if(!items||!items.length)return;
     const isOpen=openDraftFolders.includes(c.id);
-    html+=`<div class="draft-folder${isOpen?' open':''}">
+    const hasUrgent=items.some(d=>d.priority==='q1');
+    const urgentCount=items.filter(d=>d.priority==='q1'||d.priority==='q2').length;
+    html+=`<div class="draft-folder${isOpen?' open':''}" style="${hasUrgent?'border-color:rgba(251,113,133,0.4);':''}">
       <div class="draft-folder-header" onclick="toggleDraftFolder('${c.id}')">
         <span class="draft-folder-emoji">${c.emoji}</span>
         <span class="draft-folder-name">${c.label}</span>
+        ${hasUrgent?`<span style="font-size:10px;color:#fb7185;font-weight:700;animation:pulse 2s infinite;">🔴 СРОЧНО</span>`:''}
         <span class="draft-folder-count">${items.length}</span>
         <span class="draft-folder-arrow">›</span>
       </div>
       <div class="draft-folder-items">
-        ${items.map(d=>`<div class="draft-item" id="draft-${d.id}"><div class="draft-item-header"><div class="draft-bullet"></div><div class="draft-item-text">${d.text}</div><button class="draft-item-delete" onclick="deleteDraftItem('${d.id}')">✕</button></div><button class="draft-plan-btn" onclick="openPlanModal('${d.id}')">📅 Запланировать</button></div>`).join('')}
+        ${items.map(d=>{
+          const pIcon=PRIORITY_ICON[d.priority]||'';
+          const pColor=PRIORITY_COLOR[d.priority]||'';
+          const showP=d.priority&&d.priority!=='normal';
+          return `<div class="draft-item" id="draft-${d.id}" style="${d.priority==='q1'?'border-color:rgba(251,113,133,0.3);':d.priority==='q2'?'border-color:rgba(52,211,153,0.2);':''}">
+            <div class="draft-item-header">
+              <div class="draft-bullet" style="${showP?`background:${pColor}`:``}"></div>
+              <div class="draft-item-text">${showP?`<span style="color:${pColor};font-size:12px;font-weight:700;margin-right:4px;">${pIcon}</span>`:''}${d.text}</div>
+              <button class="draft-item-delete" onclick="deleteDraftItem('${d.id}')">✕</button>
+            </div>
+            <button class="draft-plan-btn" onclick="openPlanModal('${d.id}')">📅 Запланировать</button>
+          </div>`;
+        }).join('')}
       </div>
     </div>`;
   });
@@ -1357,7 +1416,7 @@ function confirmPlan(){
   const dateVal=document.getElementById('planDate').value,timeVal=document.getElementById('planTime').value;
   const duration=+document.getElementById('planDuration').value||30;
   if(!dateVal){alert('Выбери дату');return;}
-  const task={id:Date.now().toString(),name:draft.text,note:'',cat:draft.cat||'личное',priority:'normal',time:timeVal||'',duration,endTime:timeVal?addMinutesToTime(timeVal,duration):'',repeat:'none',done:false,createdKey:dateVal,fromDraft:true};
+  const task={id:Date.now().toString(),name:draft.text,note:'',cat:draft.cat||'личное',priority:draft.priority||'normal',time:timeVal||'',duration,endTime:timeVal?addMinutesToTime(timeVal,duration):'',repeat:'none',done:false,createdKey:dateVal,fromDraft:true};
   let tasks=load('tasks_'+dateVal,[]);tasks.push(task);save('tasks_'+dateVal,tasks);
   save('drafts',drafts.filter(d=>d.id!==currentPlanDraftId));
   document.getElementById('planModalOverlay').classList.remove('open');
