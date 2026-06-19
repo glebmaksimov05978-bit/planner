@@ -276,6 +276,31 @@ body{background:var(--bg);color:var(--text);font-family:'Golos Text',sans-serif;
 .notif-status.granted{color:#34d399;}
 .notif-status.denied{color:#fb7185;}
 .notif-status.default{color:var(--muted);}
+/* EISENHOWER MATRIX */
+.matrix-overlay{position:fixed;inset:0;z-index:250;background:var(--overlay);display:flex;flex-direction:column;opacity:0;pointer-events:none;transition:opacity 0.3s;overflow-y:auto;}
+.matrix-overlay.open{opacity:1;pointer-events:all;}
+.matrix-header{padding:52px 20px 12px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.matrix-title{font-family:'Unbounded',sans-serif;font-size:16px;font-weight:700;}
+.matrix-close{width:36px;height:36px;border-radius:10px;background:var(--surface);border:1px solid var(--border);color:var(--text);font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.matrix-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:0 16px;margin-bottom:16px;}
+.matrix-quadrant{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:12px;min-height:120px;backdrop-filter:blur(10px);}
+.matrix-q-header{font-family:'Unbounded',sans-serif;font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:2px;}
+.matrix-q-sub{font-size:10px;color:var(--muted);margin-bottom:8px;line-height:1.3;}
+.matrix-q-tasks{display:flex;flex-direction:column;gap:4px;}
+.matrix-task-chip{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:6px 8px;font-size:11px;font-weight:500;cursor:pointer;display:flex;align-items:center;gap:6px;transition:all 0.15s;}
+.matrix-task-chip:active{transform:scale(0.97);}
+.matrix-task-chip .mchip-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0;}
+.matrix-unassigned{padding:0 16px 16px;}
+.matrix-unassigned-label{font-family:'Unbounded',sans-serif;font-size:10px;font-weight:600;letter-spacing:0.12em;color:var(--muted);text-transform:uppercase;margin-bottom:10px;}
+.matrix-assign-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:8px;}
+.matrix-assign-name{font-size:14px;font-weight:500;margin-bottom:8px;}
+.matrix-assign-btns{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
+.matrix-assign-btn{padding:8px 4px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);font-size:10px;font-weight:700;cursor:pointer;text-align:center;font-family:'Unbounded',sans-serif;letter-spacing:0.03em;transition:all 0.15s;}
+.matrix-assign-btn:active{transform:scale(0.95);}
+.matrix-assign-btn.q1{border-color:rgba(251,113,133,0.4);color:#fb7185;}
+.matrix-assign-btn.q2{border-color:rgba(52,211,153,0.4);color:#34d399;}
+.matrix-assign-btn.q3{border-color:rgba(251,191,36,0.4);color:#fbbf24;}
+.matrix-assign-btn.q4{border-color:rgba(100,116,139,0.4);color:#94a3b8;}
 .xp-popup{position:fixed;top:40%;left:50%;transform:translate(-50%,-50%) scale(0);background:linear-gradient(135deg,#4f7fff,#a78bfa);color:white;font-family:'Unbounded',sans-serif;font-size:26px;font-weight:900;padding:18px 30px;border-radius:18px;z-index:999;pointer-events:none;box-shadow:0 8px 32px rgba(79,127,255,0.5);opacity:0;transition:transform 0.3s cubic-bezier(0.34,1.56,0.64,1),opacity 0.3s;}
 .xp-popup.show{transform:translate(-50%,-50%) scale(1);opacity:1;}
 .complete-overlay{position:fixed;inset:0;background:var(--overlay);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:300;opacity:0;pointer-events:none;transition:opacity 0.4s;}
@@ -301,6 +326,15 @@ body{background:var(--bg);color:var(--text);font-family:'Golos Text',sans-serif;
 <div class="wallpaper" id="wallpaper"></div>
 <div class="wallpaper-overlay"></div>
 <div class="stars" id="stars"></div>
+<div class="matrix-overlay" id="matrixOverlay">
+  <div class="matrix-header">
+    <div class="matrix-title">🎯 Матрица приоритетов</div>
+    <button class="matrix-close" onclick="closeMatrix()">✕</button>
+  </div>
+  <div class="matrix-grid" id="matrixGrid"></div>
+  <div class="matrix-unassigned" id="matrixUnassigned"></div>
+</div>
+
 <div class="xp-popup" id="xpPopup">+10 XP ⚡</div>
 
 <div class="complete-overlay" id="completeOverlay">
@@ -323,6 +357,7 @@ body{background:var(--bg);color:var(--text);font-family:'Golos Text',sans-serif;
         <option value="normal">Приоритет</option>
         <option value="high">🔴 Высокий</option>
         <option value="mid">🟡 Средний</option>
+        <option value="low">🔵 Низкий</option>
       </select>
     </div>
     <input type="time" class="modal-time-input" id="weekAddTime" style="margin-bottom:10px" onchange="onWeekAddTimeChange()">
@@ -402,7 +437,6 @@ body{background:var(--bg);color:var(--text);font-family:'Golos Text',sans-serif;
     <button class="ctab" onclick="switchCtab('stats')">Итоги</button>
   </div>
   <div class="cpanel active" id="cpanelTasks">
-    <div id="unscheduledSection"></div>
     <button class="add-task-btn" onclick="toggleForm()"><span style="font-size:18px">＋</span> Добавить задачу</button>
     <div class="add-form" id="addForm">
       <input class="form-input" id="fName" placeholder="Название задачи..." maxlength="100">
@@ -410,7 +444,7 @@ body{background:var(--bg);color:var(--text);font-family:'Golos Text',sans-serif;
       <div class="form-row">
         <select class="form-select" id="fCat"></select>
         <select class="form-select" id="fPriority">
-          <option value="normal">Приоритет</option><option value="high">🔴 Высокий</option><option value="mid">🟡 Средний</option>
+          <option value="normal">Приоритет</option><option value="high">🔴 Высокий</option><option value="mid">🟡 Средний</option><option value="low">🔵 Низкий</option>
         </select>
       </div>
       <div class="form-row">
@@ -429,6 +463,7 @@ body{background:var(--bg);color:var(--text);font-family:'Golos Text',sans-serif;
         <button class="btn-cancel" onclick="toggleForm()">✕</button>
       </div>
     </div>
+    <div id="unscheduledSection"></div>
     <div id="taskList"></div>
   </div>
   <div class="cpanel" id="cpanelStats">
@@ -441,8 +476,9 @@ body{background:var(--bg);color:var(--text);font-family:'Golos Text',sans-serif;
     <div class="section-label">По категориям</div>
     <div class="cat-grid" id="catGrid"></div>
   </div>
-  <div style="padding:0 20px 12px;box-sizing:border-box;width:100%;">
+  <div style="padding:0 20px 12px;box-sizing:border-box;width:100%;display:flex;flex-direction:column;gap:10px;">
     <button class="cal-sync-btn" id="calSyncBtn" onclick="syncToCalendar()">📅 Синхронизировать с Календарём</button>
+    <button onclick="openMatrix()" style="display:flex;align-items:center;justify-content:center;gap:10px;width:100%;background:linear-gradient(135deg,rgba(79,127,255,0.12),rgba(167,139,250,0.12));border:1px solid rgba(79,127,255,0.28);border-radius:16px;padding:16px;color:var(--accent);font-family:'Unbounded',sans-serif;font-size:12px;font-weight:700;letter-spacing:0.08em;cursor:pointer;">🎯 МАТРИЦА ПРИОРИТЕТОВ</button>
     <a href="focus.html" style="display:flex;align-items:center;justify-content:center;gap:10px;width:100%;background:linear-gradient(135deg,rgba(255,107,157,0.12),rgba(167,139,250,0.12));border:1px solid rgba(255,107,157,0.28);border-radius:16px;padding:16px;color:#ff6b9d;font-family:'Unbounded',sans-serif;font-size:12px;font-weight:700;letter-spacing:0.08em;text-decoration:none;">🌸 РЕЖИМ ФОКУСА</a>
   </div>
 </div>
@@ -874,7 +910,7 @@ function renderTasks(){
   const c=document.getElementById('taskList');
   const regular=tasks.filter(t=>t.time||t.done);
   if(!regular.length&&!unscheduled.length){c.innerHTML=`<div class="empty-state"><div class="empty-icon">🌌</div><div class="empty-text">Задач нет.<br>Добавь первую!</div></div>`;return;}
-  const sorted=[...regular].sort((a,b)=>{const p={high:0,mid:1,normal:2};if(p[a.priority]!==p[b.priority])return p[a.priority]-p[b.priority];if(a.time&&b.time)return a.time.localeCompare(b.time);if(a.time)return -1;if(b.time)return 1;return 0;});
+  const sorted=[...regular].sort((a,b)=>{const p={high:0,mid:1,normal:2,low:3};if(p[a.priority]!==p[b.priority])return p[a.priority]-p[b.priority];if(a.time&&b.time)return a.time.localeCompare(b.time);if(a.time)return -1;if(b.time)return 1;return 0;});
   const pending=sorted.filter(t=>!t.done),done=sorted.filter(t=>t.done);
   let html='';
   pending.forEach(t=>{html+=taskHTML(t);});
@@ -912,6 +948,7 @@ function taskHTML(t){
   const color=getCatColor(t.cat);
   const overdue=isTaskOverdue(t);
   const endStr=t.endTime||(t.time?addMinutesToTime(t.time,t.duration||30):'');
+  const isPast=viewOffset<0&&!t.done;
   return `<div class="task-card${t.done?' done':''}${overdue?' overdue':''}" id="card-${t.id}">
     <div style="position:absolute;left:0;top:0;bottom:0;width:3px;background:${color};border-radius:3px 0 0 3px;"></div>
     <div class="task-check" onclick="toggleTask('${t.id}')">${t.done?'✓':''}</div>
@@ -921,13 +958,14 @@ function taskHTML(t){
         <span class="task-cat" style="color:${color}">${getCatEmoji(t.cat)} ${getCatLabel(t.cat)}</span>
         ${t.time?`<span class="task-time">⏰ ${t.time}${endStr?'–'+endStr:''}</span>`:''}
         ${overdue?'<span class="overdue-tag">⏱ Время прошло</span>':''}
-        ${t.priority==='high'?'<span>🔴</span>':t.priority==='mid'?'<span>🟡</span>':''}
+        ${t.priority==='high'?'<span>🔴</span>':t.priority==='mid'?'<span>🟡</span>':t.priority==='low'?'<span>🔵</span>':''}
         ${t.repeat&&t.repeat!=='none'?`<span class="task-repeat">${repeatLabelFor(t)}</span>`:''}
       </div>
       ${t.note?`<div class="task-note">${t.note}</div>`:''}
     </div>
     <div class="task-right">
-      ${t.time?`<button class="edit-time-btn" onclick="openSetTimeModal('${t.id}','${offsetToKey(viewOffset)}')">✎</button>`:''}
+      ${isPast?`<button class="edit-time-btn" style="background:rgba(52,211,153,0.12);border-color:rgba(52,211,153,0.3);color:#34d399;" onclick="rescheduleToToday('${t.id}')">→ Сегодня</button>`:''}
+      ${t.time&&!isPast?`<button class="edit-time-btn" onclick="openSetTimeModal('${t.id}','${offsetToKey(viewOffset)}')">✎</button>`:''}
       <button class="task-delete" onclick="deleteTask('${t.id}')">✕</button>
     </div>
   </div>`;
@@ -981,10 +1019,71 @@ function saveTask(){
   if(load('notif_enabled',false)){cancelAllNotifications();scheduleTaskNotifications();}
 }
 
-function shiftDay(d){viewOffset+=d;refresh();}
+function rescheduleToToday(id){
+  const key=offsetToKey(viewOffset);
+  const tasks=getDayTasks(key);
+  const t=tasks.find(t=>t.id===id);if(!t)return;
+  // add to today without time (lands in unscheduled section)
+  const todayTasks=getDayTasks(todayKey());
+  if(todayTasks.some(tt=>tt.name===t.name&&!tt.done))return; // already there
+  const newTask={...t,id:Date.now().toString(),time:'',endTime:'',done:false,createdKey:todayKey(),fromDraft:false,recurringId:undefined};
+  todayTasks.push(newTask);
+  saveDayTasks(todayKey(),todayTasks);
+  // mark original as done so it doesn't keep showing
+  t.done=true;
+  saveDayTasks(key,tasks);
+  refresh();
+  showCalToast('Задача перенесена на сегодня');
+}
 function refresh(){setHeader();renderWeekStrip();renderTasks();}
 function showXpPopup(){const e=document.getElementById('xpPopup');e.classList.add('show');setTimeout(()=>e.classList.remove('show'),850);}
 function checkAllDone(tasks){if(tasks.length>0&&tasks.every(t=>t.done)&&viewOffset===0)setTimeout(()=>document.getElementById('completeOverlay').classList.add('show'),700);}
+
+// ══════════════════════════════
+//  EISENHOWER MATRIX
+// ══════════════════════════════
+const QUADRANTS=[
+  {id:'q1',label:'🔴 СРОЧНО+ВАЖНО',sub:'Делай сейчас',color:'#fb7185',cls:'q1'},
+  {id:'q2',label:'🟢 ВАЖНО',sub:'Запланируй',color:'#34d399',cls:'q2'},
+  {id:'q3',label:'🟡 СРОЧНО',sub:'Делегируй/быстро',color:'#fbbf24',cls:'q3'},
+  {id:'q4',label:'⚫ НЕ ВАЖНО',sub:'Удали/отложи',color:'#94a3b8',cls:'q4'},
+];
+function openMatrix(){renderMatrix();document.getElementById('matrixOverlay').classList.add('open');}
+function closeMatrix(){document.getElementById('matrixOverlay').classList.remove('open');}
+function getMatrixData(){return load('matrix_'+offsetToKey(viewOffset),{});}
+function saveMatrixData(data){save('matrix_'+offsetToKey(viewOffset),data);}
+function assignQuadrant(taskId,qId){const data=getMatrixData();data[taskId]=qId;saveMatrixData(data);renderMatrix();}
+function unassignQuadrant(taskId){const data=getMatrixData();delete data[taskId];saveMatrixData(data);renderMatrix();}
+function renderMatrix(){
+  const key=offsetToKey(viewOffset);
+  const tasks=getDayTasks(key).filter(t=>!t.done);
+  const data=getMatrixData();
+  document.getElementById('matrixGrid').innerHTML=QUADRANTS.map(q=>{
+    const qTasks=tasks.filter(t=>data[t.id]===q.id);
+    return `<div class="matrix-quadrant" style="border-color:${q.color}33">
+      <div class="matrix-q-header" style="color:${q.color}">${q.label}</div>
+      <div class="matrix-q-sub">${q.sub}</div>
+      <div class="matrix-q-tasks">
+        ${qTasks.map(t=>`<div class="matrix-task-chip" onclick="unassignQuadrant('${t.id}')">
+          <div class="mchip-dot" style="background:${getCatColor(t.cat)}"></div>
+          <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px">${t.name}</span>
+          <span style="font-size:9px;opacity:0.4">✕</span>
+        </div>`).join('')}
+        ${!qTasks.length?`<div style="font-size:10px;color:var(--muted);font-style:italic">Пусто</div>`:''}
+      </div>
+    </div>`;
+  }).join('');
+  const unassigned=tasks.filter(t=>!data[t.id]);
+  const ua=document.getElementById('matrixUnassigned');
+  if(!unassigned.length){ua.innerHTML=`<div style="text-align:center;padding:20px;color:var(--muted);font-size:13px">✅ Все задачи распределены</div>`;return;}
+  ua.innerHTML=`<div class="matrix-unassigned-label">Распредели задачи (${unassigned.length})</div>
+  ${unassigned.map(t=>`<div class="matrix-assign-card">
+    <div class="matrix-assign-name">${getCatEmoji(t.cat)} ${t.name}</div>
+    <div class="matrix-assign-btns">
+      ${QUADRANTS.map(q=>`<button class="matrix-assign-btn ${q.cls}" onclick="assignQuadrant('${t.id}','${q.id}')">${q.label}</button>`).join('')}
+    </div>
+  </div>`).join('')}`;
+}
 
 function switchCtab(tab){
   document.querySelectorAll('.ctab').forEach((t,i)=>t.classList.toggle('active',['tasks','stats'][i]===tab));
@@ -1450,3 +1549,4 @@ setInterval(()=>{ if(document.getElementById('screenToday').classList.contains('
 </script>
 </body>
 </html>
+
