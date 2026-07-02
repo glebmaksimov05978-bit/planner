@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Планировщик">
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="https://emojicdn.elk.sh/📅?style=apple">
+<title>ПЛАНИРОВЩИК — Вход</title>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;600;700;900&family=Golos+Text:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{width:100%;min-height:100%;background:#06041a;color:#f0e8ff;font-family:'Golos Text',sans-serif;overflow-x:hidden;}
+.bg{position:fixed;inset:0;z-index:0;}
+.bg-grad{position:absolute;inset:0;background:linear-gradient(160deg,#06041a 0%,#0d0828 40%,#130e38 70%,#06041a 100%);}
+.star{position:absolute;border-radius:50%;background:white;animation:twinkle var(--d) ease-in-out infinite;opacity:0;}
+@keyframes twinkle{0%,100%{opacity:0}50%{opacity:var(--op)}}
+.blob{position:absolute;border-radius:50%;filter:blur(80px);animation:blobMove 8s ease-in-out infinite;}
+@keyframes blobMove{0%,100%{transform:translate(0,0)}50%{transform:translate(30px,-20px)}}
+.wrap{position:relative;z-index:1;min-height:100dvh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 24px 40px;}
+.logo{text-align:center;margin-bottom:40px;}
+.logo-icon{font-size:52px;margin-bottom:12px;display:block;filter:drop-shadow(0 0 20px rgba(255,150,200,0.5));}
+.logo-title{font-family:'Unbounded',sans-serif;font-size:22px;font-weight:900;background:linear-gradient(135deg,#f0e8ff,#ffb3cc,#c44dff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:0.06em;}
+.logo-sub{font-size:13px;color:#6050a0;margin-top:6px;letter-spacing:0.08em;}
+.auth-tabs{display:flex;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:4px;margin-bottom:24px;width:100%;max-width:360px;}
+.auth-tab{flex:1;padding:10px;text-align:center;font-family:'Unbounded',sans-serif;font-size:11px;font-weight:700;letter-spacing:0.06em;color:#6050a0;cursor:pointer;border-radius:10px;transition:all 0.25s;}
+.auth-tab.active{background:linear-gradient(135deg,rgba(79,127,255,0.25),rgba(196,77,255,0.25));color:#f0e8ff;box-shadow:0 2px 12px rgba(79,127,255,0.2);}
+.auth-card{width:100%;max-width:360px;background:rgba(13,22,48,0.85);border:1px solid rgba(100,140,255,0.18);border-radius:24px;padding:28px 24px;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);}
+.field{margin-bottom:14px;}
+.field-label{font-size:12px;font-weight:600;color:#6050a0;letter-spacing:0.06em;margin-bottom:6px;display:block;}
+.field-wrap{position:relative;}
+.field-icon{position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:16px;pointer-events:none;}
+.field-input{width:100%;background:rgba(17,29,58,0.9);border:1px solid rgba(100,140,255,0.2);border-radius:12px;padding:14px 14px 14px 42px;color:#f0e8ff;font-family:'Golos Text',sans-serif;font-size:15px;outline:none;transition:border-color 0.2s;-webkit-appearance:none;}
+.field-input:focus{border-color:rgba(79,127,255,0.6);}
+.field-input::placeholder{color:#4a5a8a;}
+.field-toggle{position:absolute;right:14px;top:50%;transform:translateY(-50%);background:none;border:none;color:#4a5a8a;cursor:pointer;font-size:16px;padding:2px;}
+.forgot-link{text-align:right;margin-top:-8px;margin-bottom:14px;}
+.forgot-link a{font-size:12px;color:#4f7fff;text-decoration:none;cursor:pointer;}
+.submit-btn{width:100%;background:linear-gradient(135deg,#4f7fff,#c44dff);border:none;border-radius:14px;padding:16px;color:white;font-family:'Unbounded',sans-serif;font-size:13px;font-weight:700;letter-spacing:0.06em;cursor:pointer;box-shadow:0 6px 24px rgba(79,127,255,0.4);transition:all 0.2s;margin-bottom:16px;position:relative;overflow:hidden;}
+.submit-btn:active{opacity:0.88;transform:scale(0.98);}
+.submit-btn:disabled{opacity:0.5;cursor:not-allowed;}
+.btn-loader{display:none;position:absolute;inset:0;background:inherit;align-items:center;justify-content:center;}
+.btn-loader.show{display:flex;}
+.spinner{width:20px;height:20px;border:2px solid rgba(255,255,255,0.3);border-top-color:white;border-radius:50%;animation:spin 0.7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.divider{display:flex;align-items:center;gap:12px;margin-bottom:16px;}
+.divider-line{flex:1;height:1px;background:rgba(100,140,255,0.15);}
+.divider-text{font-size:11px;color:#4a5a8a;white-space:nowrap;}
+.social-btn{width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:14px;color:#f0e8ff;font-family:'Golos Text',sans-serif;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;transition:all 0.2s;margin-bottom:10px;}
+.social-btn:active{background:rgba(255,255,255,0.1);}
+.social-icon{font-size:18px;}
+.msg{padding:12px 14px;border-radius:12px;font-size:13px;margin-bottom:14px;display:none;line-height:1.5;}
+.msg.error{background:rgba(255,80,80,0.12);border:1px solid rgba(255,80,80,0.3);color:#ff9090;}
+.msg.success{background:rgba(52,211,153,0.12);border:1px solid rgba(52,211,153,0.3);color:#34d399;}
+.msg.show{display:block;}
+.verify-banner{background:rgba(251,191,36,0.1);border:1px solid rgba(251,191,36,0.3);border-radius:12px;padding:12px 14px;font-size:13px;color:#fbbf24;margin-bottom:14px;display:none;line-height:1.5;}
+.verify-banner.show{display:block;}
+/* Плашка "ожидаем подтверждения" */
+.waiting-banner{background:rgba(79,127,255,0.1);border:1px solid rgba(79,127,255,0.3);border-radius:16px;padding:20px;text-align:center;margin-bottom:16px;display:none;}
+.waiting-banner.show{display:block;}
+.waiting-banner .wb-icon{font-size:36px;margin-bottom:10px;}
+.waiting-banner .wb-title{font-family:'Unbounded',sans-serif;font-size:13px;font-weight:700;color:#f0e8ff;margin-bottom:6px;}
+.waiting-banner .wb-sub{font-size:12px;color:#6050a0;line-height:1.6;}
+.waiting-banner .wb-check{margin-top:14px;background:rgba(79,127,255,0.2);border:1px solid rgba(79,127,255,0.4);border-radius:10px;padding:10px 16px;color:#4f7fff;font-size:13px;font-weight:600;cursor:pointer;width:100%;}
+.waiting-banner .wb-resend{margin-top:8px;background:none;border:none;color:#6050a0;font-size:12px;cursor:pointer;text-decoration:underline;}
+.terms{font-size:11px;color:#4a5a8a;text-align:center;margin-top:16px;line-height:1.6;}
+.terms a{color:#4f7fff;}
+</style>
+</head>
+<body>
+<div class="bg">
+  <div class="bg-grad"></div>
+  <div class="blob" style="width:300px;height:300px;background:rgba(79,127,255,0.08);top:-50px;left:-80px;animation-delay:0s;"></div>
+  <div class="blob" style="width:250px;height:250px;background:rgba(196,77,255,0.07);bottom:0;right:-60px;animation-delay:3s;"></div>
+</div>
+
+<div class="wrap">
+  <div class="logo">
+    <span class="logo-icon">📅</span>
+    <div class="logo-title">ПЛАНИРОВЩИК</div>
+  </div>
+
+  <div class="auth-tabs" id="authTabs">
+    <div class="auth-tab active" id="tabLogin" onclick="switchTab('login')">ВОЙТИ</div>
+    <div class="auth-tab" id="tabReg" onclick="switchTab('register')">РЕГИСТРАЦИЯ</div>
+  </div>
+
+  <div class="auth-card">
+    <div class="msg error" id="msgError"></div>
+    <div class="msg success" id="msgSuccess"></div>
+
+    <!-- Баннер ожидания подтверждения email -->
+    <div class="waiting-banner" id="waitingBanner">
+      <div class="wb-icon">📧</div>
+      <div class="wb-title">Письмо отправлено!</div>
+      <div class="wb-sub" id="waitingEmail">Подтверди email и нажми кнопку ниже.<br>Проверь папку Спам.</div>
+      <button class="wb-check" onclick="checkVerification()">✅ Я подтвердил — войти</button>
+      <button class="wb-resend" onclick="resendVerification()">Отправить письмо повторно</button>
+    </div>
+
+    <div class="verify-banner" id="verifyBanner">
+      📧 Сначала подтверди email. <a href="#" onclick="resendVerification()" style="color:#fbbf24;">Отправить повторно</a>
+    </div>
+
+    <!-- LOGIN -->
+    <div id="formLogin">
+      <div class="field">
+        <label class="field-label">EMAIL</label>
+        <div class="field-wrap">
+          <span class="field-icon">✉️</span>
+          <input class="field-input" id="loginEmail" type="email" placeholder="your@email.com" autocomplete="email">
+        </div>
+      </div>
+      <div class="field">
+        <label class="field-label">ПАРОЛЬ</label>
+        <div class="field-wrap">
+          <span class="field-icon">🔒</span>
+          <input class="field-input" id="loginPassword" type="password" placeholder="••••••••" autocomplete="current-password">
+          <button class="field-toggle" onclick="togglePwd('loginPassword',this)" type="button">👁</button>
+        </div>
+      </div>
+      <div class="forgot-link"><a onclick="showForgot()">Забыл пароль?</a></div>
+      <button class="submit-btn" id="btnLogin" onclick="doLogin()">
+        ВОЙТИ
+        <div class="btn-loader" id="loaderLogin"><div class="spinner"></div></div>
+      </button>
+    </div>
+
+    <!-- REGISTER -->
+    <div id="formRegister" style="display:none">
+      <div class="field">
+        <label class="field-label">ИМЯ</label>
+        <div class="field-wrap">
+          <span class="field-icon">👤</span>
+          <input class="field-input" id="regName" type="text" placeholder="Как тебя зовут?" autocomplete="name">
+        </div>
+      </div>
+      <div class="field">
+        <label class="field-label">EMAIL</label>
+        <div class="field-wrap">
+          <span class="field-icon">✉️</span>
+          <input class="field-input" id="regEmail" type="email" placeholder="your@email.com" autocomplete="email">
+        </div>
+      </div>
+      <div class="field">
+        <label class="field-label">ПАРОЛЬ</label>
+        <div class="field-wrap">
+          <span class="field-icon">🔒</span>
+          <input class="field-input" id="regPassword" type="password" placeholder="Минимум 6 символов" autocomplete="new-password">
+          <button class="field-toggle" onclick="togglePwd('regPassword',this)" type="button">👁</button>
+        </div>
+      </div>
+      <div class="field">
+        <label class="field-label">ПОВТОРИ ПАРОЛЬ</label>
+        <div class="field-wrap">
+          <span class="field-icon">🔒</span>
+          <input class="field-input" id="regPassword2" type="password" placeholder="••••••••" autocomplete="new-password">
+          <button class="field-toggle" onclick="togglePwd('regPassword2',this)" type="button">👁</button>
+        </div>
+      </div>
+      <button class="submit-btn" id="btnReg" onclick="doRegister()">
+        СОЗДАТЬ АККАУНТ
+        <div class="btn-loader" id="loaderReg"><div class="spinner"></div></div>
+      </button>
+    </div>
+
+    <!-- FORGOT -->
+    <div id="formForgot" style="display:none">
+      <div style="font-size:13px;color:#6050a0;margin-bottom:16px;line-height:1.6;">Введи свой email — пришлём ссылку для сброса пароля.</div>
+      <div class="field">
+        <label class="field-label">EMAIL</label>
+        <div class="field-wrap">
+          <span class="field-icon">✉️</span>
+          <input class="field-input" id="forgotEmail" type="email" placeholder="your@email.com" autocomplete="email">
+        </div>
+      </div>
+      <button class="submit-btn" id="btnForgot" onclick="doForgot()">
+        ОТПРАВИТЬ ПИСЬМО
+        <div class="btn-loader" id="loaderForgot"><div class="spinner"></div></div>
+      </button>
+      <div style="text-align:center;margin-top:12px;">
+        <a onclick="showLogin()" style="font-size:13px;color:#4f7fff;cursor:pointer;">← Назад ко входу</a>
+      </div>
+    </div>
+
+    <div class="divider" id="socialDivider">
+      <div class="divider-line"></div>
+      <div class="divider-text">или войди через</div>
+      <div class="divider-line"></div>
+    </div>
+
+    <button class="social-btn" id="btnGoogle" onclick="doGoogle()">
+      <span class="social-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+      </span>
+      Продолжить с Google
+    </button>
+
+    <div class="terms">Регистрируясь, ты соглашаешься с условиями использования</div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import {
+  getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword,
+  sendPasswordResetEmail, sendEmailVerification, updateProfile,
+  GoogleAuthProvider, signInWithPopup, onAuthStateChanged, reload
+} from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+
+const app = initializeApp({
+  apiKey: "AIzaSyBtg0FQzADu5-B3UCkL64ZslzZeRDdlRZI",
+  authDomain: "planner-app-f1c87.firebaseapp.com",
+  projectId: "planner-app-f1c87",
+  storageBucket: "planner-app-f1c87.firebasestorage.app",
+  messagingSenderId: "828098584860",
+  appId: "1:828098584860:web:7815f5a063f35ece649ad9"
+});
+const auth = getAuth(app);
+const googleProvider = new GoogleAuthProvider();
+
+// Если уже залогинен и верифицирован — сразу в приложение
+onAuthStateChanged(auth, user => {
+  if (user && user.emailVerified) {
+    window.location.href = 'index.html';
+  }
+});
+
+// ── Helpers ──
+function showMsg(type, text) {
+  clearMsgs();
+  const el = document.getElementById(type === 'error' ? 'msgError' : 'msgSuccess');
+  el.textContent = text; el.classList.add('show');
+}
+function clearMsgs() {
+  document.getElementById('msgError').classList.remove('show');
+  document.getElementById('msgSuccess').classList.remove('show');
+}
+function setLoading(btnId, loaderId, on) {
+  document.getElementById(btnId).disabled = on;
+  document.getElementById(loaderId).classList.toggle('show', on);
+}
+function hideSocialSection(hide) {
+  document.getElementById('socialDivider').style.display = hide ? 'none' : 'flex';
+  document.getElementById('btnGoogle').style.display = hide ? 'none' : 'flex';
+}
+
+const ERR = {
+  'auth/user-not-found': 'Пользователь не найден',
+  'auth/wrong-password': 'Неверный пароль',
+  'auth/invalid-credential': 'Неверный email или пароль',
+  'auth/email-already-in-use': 'Этот email уже зарегистрирован',
+  'auth/weak-password': 'Пароль слишком короткий (минимум 6 символов)',
+  'auth/invalid-email': 'Неверный формат email',
+  'auth/too-many-requests': 'Слишком много попыток. Попробуй позже',
+  'auth/network-request-failed': 'Ошибка сети. Проверь интернет',
+  'auth/popup-closed-by-user': 'Окно входа закрыто',
+};
+function getErrText(e) { return ERR[e.code] || e.message; }
+
+// ── Показать баннер ожидания подтверждения ──
+function showWaitingBanner(email) {
+  document.getElementById('formLogin').style.display = 'none';
+  document.getElementById('formRegister').style.display = 'none';
+  document.getElementById('authTabs').style.display = 'none';
+  hideSocialSection(true);
+  document.getElementById('waitingBanner').classList.add('show');
+  document.getElementById('waitingEmail').innerHTML =
+    `Письмо отправлено на <b>${email}</b>.<br>Подтверди и нажми кнопку ниже.<br><span style="color:#4a5a8a;font-size:11px;">Не пришло? Проверь папку Спам.</span>`;
+}
+
+// ── LOGIN ──
+window.doLogin = async function() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const pass = document.getElementById('loginPassword').value;
+  if (!email || !pass) { showMsg('error', 'Заполни все поля'); return; }
+  setLoading('btnLogin', 'loaderLogin', true);
+  try {
+    const cred = await signInWithEmailAndPassword(auth, email, pass);
+    if (!cred.user.emailVerified) {
+      await auth.signOut();
+      // показываем баннер ожидания
+      window._pendingUser = cred.user;
+      showMsg('error', 'Email не подтверждён');
+      document.getElementById('verifyBanner').classList.add('show');
+      setLoading('btnLogin', 'loaderLogin', false);
+      return;
+    }
+    window.location.href = 'index.html';
+  } catch(e) {
+    showMsg('error', getErrText(e));
+    setLoading('btnLogin', 'loaderLogin', false);
+  }
+};
+
+// ── REGISTER ──
+window.doRegister = async function() {
+  const name = document.getElementById('regName').value.trim();
+  const email = document.getElementById('regEmail').value.trim();
+  const pass = document.getElementById('regPassword').value;
+  const pass2 = document.getElementById('regPassword2').value;
+  if (!name || !email || !pass || !pass2) { showMsg('error', 'Заполни все поля'); return; }
+  if (pass !== pass2) { showMsg('error', 'Пароли не совпадают'); return; }
+  if (pass.length < 6) { showMsg('error', 'Пароль минимум 6 символов'); return; }
+  setLoading('btnReg', 'loaderReg', true);
+  try {
+    const cred = await createUserWithEmailAndPassword(auth, email, pass);
+    await updateProfile(cred.user, { displayName: name });
+    await sendEmailVerification(cred.user);
+    // сохраняем юзера для checkVerification
+    window._pendingUser = cred.user;
+    window._pendingPass = pass;
+    // выходим чтобы onAuthStateChanged не редиректил
+    await auth.signOut();
+    showWaitingBanner(email);
+  } catch(e) {
+    showMsg('error', getErrText(e));
+  }
+  setLoading('btnReg', 'loaderReg', false);
+};
+
+// ── ПРОВЕРИТЬ ПОДТВЕРЖДЕНИЕ (кнопка "Я подтвердил") ──
+window.checkVerification = async function() {
+  const btn = document.querySelector('.wb-check');
+  btn.textContent = 'Проверяем...';
+  btn.disabled = true;
+  try {
+    // Перелогиниваемся чтобы получить свежий токен
+    const email = document.getElementById('regEmail').value.trim() ||
+                  document.getElementById('loginEmail').value.trim();
+    const pass = window._pendingPass || document.getElementById('loginPassword').value;
+
+    if (!email || !pass) {
+      // Нет данных — просим войти вручную
+      document.getElementById('waitingBanner').classList.remove('show');
+      document.getElementById('authTabs').style.display = 'flex';
+      document.getElementById('formLogin').style.display = 'block';
+      hideSocialSection(false);
+      showMsg('success', 'Теперь войди с твоим email и паролем');
+      return;
+    }
+
+    const cred = await signInWithEmailAndPassword(auth, email, pass);
+    await reload(cred.user);
+    if (cred.user.emailVerified) {
+      window.location.href = 'index.html';
+    } else {
+      showMsg('error', 'Email ещё не подтверждён. Проверь почту и попробуй снова.');
+      btn.textContent = '✅ Я подтвердил — войти';
+      btn.disabled = false;
+      await auth.signOut();
+    }
+  } catch(e) {
+    showMsg('error', getErrText(e));
+    btn.textContent = '✅ Я подтвердил — войти';
+    btn.disabled = false;
+  }
+};
+
+// ── RESEND ──
+window.resendVerification = async function() {
+  try {
+    const email = document.getElementById('regEmail').value.trim() ||
+                  document.getElementById('loginEmail').value.trim();
+    const pass = window._pendingPass || document.getElementById('loginPassword').value;
+    if (email && pass) {
+      const cred = await signInWithEmailAndPassword(auth, email, pass);
+      await sendEmailVerification(cred.user);
+      await auth.signOut();
+      showMsg('success', 'Письмо отправлено повторно! Проверь Спам.');
+    }
+  } catch(e) {
+    showMsg('error', getErrText(e));
+  }
+};
+
+// ── FORGOT ──
+window.doForgot = async function() {
+  const email = document.getElementById('forgotEmail').value.trim();
+  if (!email) { showMsg('error', 'Введи email'); return; }
+  setLoading('btnForgot', 'loaderForgot', true);
+  try {
+    await sendPasswordResetEmail(auth, email);
+    showMsg('success', `📧 Письмо отправлено на ${email}. Проверь папку Спам.`);
+  } catch(e) {
+    showMsg('error', getErrText(e));
+  }
+  setLoading('btnForgot', 'loaderForgot', false);
+};
+
+// ── GOOGLE ──
+window.doGoogle = async function() {
+  try {
+    await signInWithPopup(auth, googleProvider);
+    window.location.href = 'index.html';
+  } catch(e) {
+    if (e.code !== 'auth/popup-closed-by-user') showMsg('error', getErrText(e));
+  }
+};
+
+// ── UI helpers ──
+window.switchTab = function(tab) {
+  document.getElementById('tabLogin').classList.toggle('active', tab === 'login');
+  document.getElementById('tabReg').classList.toggle('active', tab === 'register');
+  document.getElementById('formLogin').style.display = tab === 'login' ? 'block' : 'none';
+  document.getElementById('formRegister').style.display = tab === 'register' ? 'block' : 'none';
+  document.getElementById('formForgot').style.display = 'none';
+  document.getElementById('waitingBanner').classList.remove('show');
+  document.getElementById('authTabs').style.display = 'flex';
+  hideSocialSection(false);
+  clearMsgs();
+};
+window.showForgot = function() {
+  document.getElementById('formLogin').style.display = 'none';
+  document.getElementById('formRegister').style.display = 'none';
+  document.getElementById('formForgot').style.display = 'block';
+  hideSocialSection(true);
+  clearMsgs();
+};
+window.showLogin = function() { switchTab('login'); };
+window.togglePwd = function(id, btn) {
+  const inp = document.getElementById(id);
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+  btn.textContent = inp.type === 'password' ? '👁' : '🙈';
+};
+
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Enter') return;
+  if (document.getElementById('formLogin').style.display !== 'none') doLogin();
+  else if (document.getElementById('formRegister').style.display !== 'none') doRegister();
+  else if (document.getElementById('formForgot').style.display !== 'none') doForgot();
+});
+</script>
+
+<script>
+(function(){
+  const wrap = document.querySelector('.bg');
+  for(let i=0;i<40;i++){
+    const s=document.createElement('div');s.className='star';
+    const sz=Math.random()*2+0.5;
+    s.style.cssText=`width:${sz}px;height:${sz}px;left:${Math.random()*100}%;top:${Math.random()*100}%;--d:${(Math.random()*4+2).toFixed(1)}s;--op:${(Math.random()*0.4+0.1).toFixed(2)};animation-delay:${(Math.random()*5).toFixed(1)}s`;
+    wrap.appendChild(s);
+  }
+})();
+</script>
+</body>
+</html>
